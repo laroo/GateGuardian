@@ -1,5 +1,5 @@
 (librepcb_symbol 885710d7-2033-40d6-bde0-837a8bd2fe95
- (name "2-1393793-4")
+ (name "MINI-RELAY-ALI 2-1393793-4")
  (description "")
  (keywords "eagle,import")
  (author "EAGLE Import")

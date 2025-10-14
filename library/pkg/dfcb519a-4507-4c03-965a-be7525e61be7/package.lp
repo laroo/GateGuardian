@@ -1,5 +1,5 @@
 (librepcb_package dfcb519a-4507-4c03-965a-be7525e61be7
- (name "DIP762W50P254L712H400Q6N")
+ (name "4N25 DIP762W50P254L712H400Q6N")
  (description "")
  (keywords "eagle,import")
  (author "EAGLE Import")
@@ -15,10 +15,12 @@
  (pad e6ddd5b0-31d9-418f-a615-71c53f947ae2 (name "6"))
  (pad bab93188-4885-44bf-ad79-f606e9b2a73e (name "3"))
  (pad 07f1f4d6-da2b-4547-937f-13df0135fe13 (name "4"))
+ (3d_model f07860da-353e-4d39-9c95-bfc37a752cfc (name "4N25--3DModel-STEP-510211"))
  (footprint 7d83306c-eab5-494e-85b0-2099965888c7
   (name "default")
   (description "")
-  (3d_position 0.0 0.0 0.0) (3d_rotation 0.0 0.0 0.0)
+  (3d_position 0.0 0.0 0.0) (3d_rotation 90.0 0.0 0.0)
+  (3d_model f07860da-353e-4d39-9c95-bfc37a752cfc)
   (pad 37b0da98-dadd-48d1-862e-f5cdf0c1ef71 (side top) (shape roundrect)
    (position -3.81 0.0) (rotation 0.0) (size 1.308 1.308) (radius 1.0)
    (stop_mask auto) (solder_paste off) (clearance 0.0) (function unspecified)

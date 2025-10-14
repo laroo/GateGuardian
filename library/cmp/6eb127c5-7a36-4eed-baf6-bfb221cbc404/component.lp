@@ -1,5 +1,5 @@
 (librepcb_component 6eb127c5-7a36-4eed-baf6-bfb221cbc404
- (name "2-1393793-4")
+ (name "MINI-RELAY-ALI 2-1393793-4")
  (description "Check availability")
  (keywords "eagle,import")
  (author "EAGLE Import")
