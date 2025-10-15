@@ -367,7 +367,7 @@
  (component 332eb92e-4d46-4edc-9b10-2c2c406e4dab
   (lib_component b740698a-90b7-40ab-a3d2-69b64e7b8163)
   (lib_variant 832bd731-26d7-4227-898d-91b072c28e8f)
-  (name "J11") (value "24v DC")
+  (name "J11") (value "- 24v DC +")
   (lock_assembly false)
   (device 0e644ed8-8279-4244-9147-8dffdefbd3b4
    (variant 9289fc78-84fb-4ae6-8329-793579d3fccd)
