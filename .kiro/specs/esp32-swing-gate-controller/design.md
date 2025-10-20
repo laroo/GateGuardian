@@ -371,48 +371,7 @@ struct Config {
 - **Memory Monitoring**: Periodic heap usage reports
 - **Performance Metrics**: Loop execution time monitoring
 
-## PCB Design and Bill of Materials (Requirement 8)
-
-### PCB Layout Design
-- **ESP32 Placement**: ESP32 DevKit v1 positioned at center of PCB for optimal trace routing
-- **Ethernet Shield**: W5500 Ethernet module integrated on PCB with SPI connections
-- **Relay Section**: 2-channel relay module with optocoupler isolation
-- **Power Distribution**: Dedicated 5V and 3.3V power planes with proper decoupling
-- **Board Size**: 100mm x 80mm (4-layer PCB recommended)
-
-### Component Placement Strategy
-- **Input Section**: Button and sensor inputs with pull-up resistors
-- **Output Section**: LED indicators with current limiting resistors
-- **Power Section**: Power input connector and voltage regulation
-- **Communication**: Ethernet connector and SPI routing
-- **Protection**: TVS diodes and fuses for external connections
-
-### Bill of Materials (BOM)
-
-| Component | Description | Quantity | Part Number | Notes |
-|-----------|-------------|----------|-------------|-------|
-| ESP32 DevKit v1 | Main microcontroller | 1 | ESP32-WROOM-32 | 30-pin development board |
-| W5500 Ethernet Module | Network connectivity | 1 | W5500 | SPI interface |
-| 2-Channel Relay Module | Gate control relays | 1 | SRD-05VDC-SL-C | 5V coil, 10A contacts |
-| Red LED | Gate closed indicator | 1 | 5mm LED | Standard red LED |
-| Green LED | Gate open indicator | 1 | 5mm LED | Standard green LED |
-| Resistors 220Ω | LED current limiting | 2 | 1/4W | For LED protection |
-| Resistors 10kΩ | Pull-up resistors | 2 | 1/4W | Button and sensor |
-| Capacitors 100nF | Decoupling capacitors | 4 | Ceramic | Power supply filtering |
-| Capacitors 10µF | Power filtering | 2 | Electrolytic | 5V and 3.3V rails |
-| Screw Terminals | External connections | 6 | 2-pin | Field wiring |
-| RJ45 Connector | Ethernet connection | 1 | Shielded | Network interface |
-| Power Connector | 5V DC input | 1 | Barrel jack | 2.1mm center positive |
-| TVS Diodes | ESD protection | 4 | SMBJ5.0A | I/O protection |
-| Fuse Holder | Power protection | 1 | 5x20mm | With 2A fuse |
-
-### Safety Features
-- **Galvanic Isolation**: Relay contacts provide isolation between control and power circuits
-- **ESD Protection**: TVS diodes on all external I/O connections
-- **Power Protection**: Replaceable fuse on power input
-- **Enclosure Compatibility**: Mounting holes for IP65 rated enclosure
-
-## Integration with Sommer Twist 350 (Requirement 9)
+## Integration with Sommer Twist 350
 
 ### Wiring Diagram and Connection Manual
 

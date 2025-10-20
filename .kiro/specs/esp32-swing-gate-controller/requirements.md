@@ -88,21 +88,3 @@ The ESP32 Swing Gate Controller is an embedded system that manages the operation
 2. Make the MQTT broker configurable, use broker.hivemq.com:1883 with a random client ID for testing.
 2. Publish a topic with the current gate state every 10 seconds
 3. Subscribe a topic and listen for a gate open or close value
-
-### Requirement 8
-
-**User Story:** As a electrician, I want a PCB design with the ESP32, ethernet shield, relays and passive components based on the requirements.
-
-#### Acceptance Criteria
-
-1. Design a PCB with a ESP32 development board in the center.
-2. Create a BOM (bill of materials)
-
-
-### Requirement 9
-
-**User Story:** As a electrician, I want a manual on how to connect the gate controller to the Sommer Twist 350 main board.
-
-#### Acceptance Criteria
-
-1. DEFINE wiring diagram with clear terminal block numbering based on manual https://www.sommer.eu/SOMMER/Downloads/Montageanleitung/Drehtorantriebe/twist%20350%20-%20350%20rapido/twist-350-rapido_46800V001_EN.pdf (see pages 31 to 34)
