@@ -1,7 +1,8 @@
 # Gate Guardian
 
-![GitHub Stars](https://img.shields.io/github/stars/laroo/GateGuardian?style=flat-square&color=yellow)  
+
 ![GitHub Forks](https://img.shields.io/github/forks/laroo/GateGuardian?style=flat-square&color=blue)
+![GitHub Stars](https://img.shields.io/github/stars/laroo/GateGuardian?style=flat-square&color=yellow)
 ![LibrePCB Powered](https://img.shields.io/badge/Powered%20By-LibrePCB-red?style=flat-square)  
 
 **Automating the Sommer Twist 350 Swing Gate with ESP32 and MQTT**
@@ -20,7 +21,14 @@ Gerber files for the PCB can be found [here](librepcb/output/v1/gerber).
 
 ## Code
 
-The ESP32 code can be found in the [here](src).
+The firmware is built on the Arduino framework using PlatformIO and implements a robust gate control system with the following key features:
+
+- **MQTT Integration**: Remote control and status monitoring via MQTT over Ethernet (W5500)
+- **Visual Feedback**: Dual LED system (red/green) indicating gate state with blinking patterns during movement
+- **Position Sensing**: Real-time gate position detection using magnetic sensors
+- **Safety Features**: Relay pulse timing, state machine logic, and operation timeouts
+- **Diagnostics**: Serial output at 115200 baud for debugging and monitoring
+
 
 ### Platform IO Setup
 
@@ -29,4 +37,16 @@ pyenv local 3.13
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+### Build
+
+```
+pio run
+```
+
+### Upload
+
+```
+pio run --target upload -v
 ```
