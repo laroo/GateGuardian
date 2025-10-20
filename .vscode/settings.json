@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "new": "cpp",
+        "streambuf": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled",
+    "kiroAgent.configureMCP": "Disabled"
+}
