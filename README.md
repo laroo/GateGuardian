@@ -19,21 +19,21 @@ Used LibrePCB to design the schematics and PCB.
 
 Gerber files for the PCB can be found [here](librepcb/output/v1/gerber).
 
-# IO
+# Input/Output
 
-| IO | Direction | Function |
-|----|----------|
-| GPIO 12 | Out | Gate Close Relay |
-| GPIO 14 | Out | Gate Stop Relay |
-| GPIO 15 | Out | Gate Open Relay |
-| GPIO 17 | Out | Red LED |
-| GPIO 5 | Out | Green LED |
-| GPIO 33 | In | Gate Lights |
-| GPIO 32 | In | Gate Lock |
-| GPIO 35 | In | External Relay |
-| GPIO 36 | In | Photo eye |
-| GPIO 4 | In | Sensor 1 |
-| GPIO 2 | In | Sensor 2 |
+| Pin | Direction | Function | Note |
+|----|----------|----------|------|
+| GPIO 12 | Output | Gate Close Relay | Pulse to close the gate |
+| GPIO 14 | Output | Gate Stop Relay | Pulse to stop the gate |
+| GPIO 15 | Output | Gate Open Relay | Pulse to open the gate |
+| GPIO 17 | Output | Red LED | Blinking during closing, solid during opening |
+| GPIO 5 | Output | Green LED | Blinking during opening, solid during closing |
+| GPIO 33 | Input | Gate Lights | Blinking warning light when opening or cloing |
+| GPIO 32 | Input | Gate Lock | Enabled when gate is closed |
+| GPIO 35 | Input | External Relay | Triggered when gate is closed |
+| GPIO 36 | Input | Photo eye | When someone/omething goes through the gate |
+| GPIO 4 | Input | Sensor 1 | Optional sensor (not used) |
+| GPIO 2 | Input | Sensor 2 | Optional sensor (not used) |
 
 ## Code
 
