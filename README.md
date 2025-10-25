@@ -9,15 +9,26 @@
 
 This repository contains the design and code for Gate Guardian, an ESP32 swing gate controller designed to operate and monitor a Sommer Twist 350 swing gate. The system integrates remote control via MQTT over Ethernet, real-time status monitoring, and visual feedback. The design emphasizes reliability, safety, and ease of installation.
 
+## Changelog
+
+v1.1
+- Changed pins for status LEDs as these were input only:
+  - Red LED: GPIO 17 (from GPIO 39)
+  - Green LED: GPIO 5 (from GPIO 36)
+  - Photo eye: GPIO 36 (from GPIO 5)
+
+v1.0
+- Initial release
+
 ## Schematics and PCB
 
 Used LibrePCB to design the schematics and PCB.
 
-![Schematic](GateGuardian_Schematics_v1.png)
+![Schematic](GateGuardian_Schematics_v1.1.png)
 
-![PCB](GateGuardian_PCB_v1.png)
+![PCB](GateGuardian_PCB_v1.1.png)
 
-Gerber files for the PCB can be found [here](librepcb/output/v1/gerber).
+Gerber files for the PCB can be found [here](librepcb/output/v1.1/gerber).
 
 # Input/Output
 
