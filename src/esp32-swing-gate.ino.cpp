@@ -10,16 +10,24 @@
  * - Serial diagnostics at 115200 baud
  */
 
-
 #include "Arduino.h"
 #include <PubSubClient.h>
 #include <arduino-timer.h>
-#include <WiFi.h>
+#include <EthernetESP32.h>
+// #include <WiFi.h>
+#include <WebServer.h>
+#include <ElegantOTA.h>
 
 #include "gate.h"
 #include "ledmanager.h"
-#include "mqttmanager.h"
+// #include "mqttmanager.h"
 #include <SPI.h>
+
+EMACDriver driver(ETH_PHY_LAN8720, 23, 18, 16);   // note powerPin = 16 required
+// EMACDriver driver(ETH_PHY_LAN8720, ETH_PHY_MDC, ETH_PHY_MDIO, ETH_PHY_POWER);
+// EthernetClient   ethClient;
+
+WebServer server(80);
 
 // ============================================================================
 // CONFIGURATION STRUCTURE
@@ -40,18 +48,19 @@ struct Config {
   unsigned long debounceTime = 50;         // 50ms button debounce
 
   // GPIO Pins
-  int buttonPin = 13;
-  int sensorPin = 22;
-  int redLedPin = 12;
-  int greenLedPin = 14;
-  int openRelayPin = 2;
-  int closeRelayPin = 0;
+  int buttonPin = 35;
+  int sensorPin = 33;
+  int redLedPin = 17;
+  int greenLedPin = 5;
+  int openRelayPin = 15;
+  int closeRelayPin = 12;
+  int stopRelayPin = 14;
 
   // Ethernet SPI Pins
-  int ethernetCSPin = 5;
-  int ethernetMOSIPin = 23;
-  int ethernetMISOPin = 19;
-  int ethernetSCKPin = 18;
+  // int ethernetCSPin = 5;
+  // int ethernetMOSIPin = 23;
+  // int ethernetMISOPin = 19;
+  // int ethernetSCKPin = 18;
 };
 
 // ============================================================================
@@ -60,7 +69,7 @@ struct Config {
 Config config;
 Gate *gate = nullptr;
 LEDManager *ledManager = nullptr;
-MQTTManager *mqttManager = nullptr;
+// MQTTManager *mqttManager = nullptr;
 
 // Timer for main loop management
 auto mainTimer = timer_create_default();
@@ -94,7 +103,7 @@ void setup() {
   Serial.print("[INIT] Free heap: ");
   Serial.print(ESP.getFreeHeap());
   Serial.println(" bytes");
-
+  
   // Generate random client ID for MQTT
   randomSeed(analogRead(0));
   sprintf(config.clientId, "esp32_gate_%06X", random(0xFFFFFF));
@@ -136,22 +145,64 @@ void setup() {
     Serial.println("[ERROR] Failed to initialize LED manager");
   }
 
-  // Initialize MQTT Manager (Requirements 7.1, 7.2)
-  mqttManager = new MQTTManager(config.mqttBroker, config.mqttPort, 
-                                config.clientId, config.statusTopic, 
-                                config.commandTopic);
-  if (mqttManager) {
-    mqttManager->initialize();
-    
-    // Set gate controller reference for command handling
-    if (gate) {
-      mqttManager->setGateController(gate);
-    }
-    
-    Serial.println("[INIT] MQTT manager initialized");
+  Ethernet.init(driver);
+
+  Serial.println("Initialize Ethernet with DHCP:");
+  if (Ethernet.begin()) {
+    Serial.print("  DHCP assigned IP ");
+    Serial.println(Ethernet.localIP());
   } else {
-    Serial.println("[ERROR] Failed to initialize MQTT manager");
+    Serial.println("Failed to configure Ethernet using DHCP");
+    while (true) {
+      delay(1);
+    }
   }
+
+  // if (MDNS.begin("gateguardian")) {
+  //   Serial.println("MDNS responder started");
+  // }
+
+  // // Initialize MQTT Manager (Requirements 7.1, 7.2)
+  // mqttManager = new MQTTManager(config.mqttBroker, config.mqttPort, 
+  //                               config.clientId, config.statusTopic, 
+  //                               config.commandTopic);
+  // if (mqttManager) {
+  //   mqttManager->initialize();
+    
+  //   // Set gate controller reference for command handling
+  //   if (gate) {
+  //     mqttManager->setGateController(gate);
+  //   }
+    
+  //   Serial.println("[INIT] MQTT manager initialized");
+  // } else {
+  //   Serial.println("[ERROR] Failed to initialize MQTT manager");
+  // }
+
+
+  server.on("/", []() {
+    server.send(200, "text/plain", "Hi! This is GateGuardian REUPLOAD1.");
+  });
+  server.on("/gate/close", []() {
+    gate->closeGate();
+    server.send(200, "text/plain", "Gate closing...");
+  });
+  server.on("/gate/open", []() {
+    gate->openGate();
+    server.send(200, "text/plain", "Gate opening...");
+  });
+  server.on("/gate/toggle", []() {
+    gate->toggle();
+    server.send(200, "text/plain", "Gate toggling...");
+  });
+  
+  // server.on("/gate/stop", []() {
+  //   gate->stop();
+  //   server.send(200, "text/plain", "Gate stopping...");
+  // });
+  ElegantOTA.begin(&server);
+  server.begin();
+  Serial.println("HTTP server started");
 
   // Print configuration summary
   printConfigSummary();
@@ -164,6 +215,9 @@ void setup() {
 // MAIN LOOP
 // ============================================================================
 void loop() {
+  server.handleClient();
+  ElegantOTA.loop();
+
   unsigned long loopStart = millis();
 
   // Handle button input with debouncing
@@ -189,9 +243,9 @@ void loop() {
   }
 
   // Update MQTT manager (Requirements 7.1, 7.2, 7.3, 7.4)
-  if (mqttManager) {
-    mqttManager->update();
-  }
+  // if (mqttManager) {
+  //   mqttManager->update();
+  // }
 
   // Tick main timer for any scheduled tasks
   mainTimer.tick();
@@ -244,12 +298,16 @@ void initializeGPIO() {
   // Configure relay outputs
   pinMode(config.openRelayPin, OUTPUT);
   pinMode(config.closeRelayPin, OUTPUT);
+  pinMode(config.stopRelayPin, OUTPUT);
   digitalWrite(config.openRelayPin, LOW);
   digitalWrite(config.closeRelayPin, LOW);
-  Serial.print("[INIT] Relay pins ");
+  digitalWrite(config.stopRelayPin, LOW);
+  Serial.print("[INIT] Relay pins: ");
   Serial.print(config.openRelayPin);
-  Serial.print(" and ");
+  Serial.print(", ");
   Serial.print(config.closeRelayPin);
+  Serial.print(", ");
+  Serial.print(config.stopRelayPin);
   Serial.println(" configured as OUTPUT");
 
   Serial.println("[INIT] GPIO pins configured successfully");

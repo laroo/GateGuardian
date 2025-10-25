@@ -12,12 +12,12 @@
 // ============================================================================
 // GPIO PIN DEFINITIONS (extern declarations from header)
 // ============================================================================
-const int PIN_LED_GATE_CLOSED = 12;  // Red LED: closed (blink = closing)
-const int PIN_LED_GATE_OPEN = 14;    // Green LED: open (blink = opening)
-const int PIN_RELAY_GATE_CLOSE = 0;  // Close relay control
-const int PIN_RELAY_GATE_OPEN = 2;   // Open relay control
-const int PIN_SENSOR_GATE_OPEN = 22; // Gate position sensor
-const int PIN_BUTTON = 13;           // Manual control button
+const int PIN_LED_GATE_CLOSED = 17;  // Red LED: closed (blink = closing)
+const int PIN_LED_GATE_OPEN = 5;    // Green LED: open (blink = opening)
+const int PIN_RELAY_GATE_CLOSE = 12;  // Close relay control
+const int PIN_RELAY_GATE_OPEN = 15;   // Open relay control
+const int PIN_SENSOR_GATE_OPEN = 33; // Gate position sensor
+const int PIN_BUTTON = 35;           // Manual control button
 
 // ============================================================================
 // GATE CLASS IMPLEMENTATION

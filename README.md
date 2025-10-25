@@ -19,6 +19,22 @@ Used LibrePCB to design the schematics and PCB.
 
 Gerber files for the PCB can be found [here](librepcb/output/v1/gerber).
 
+# IO
+
+| IO | Direction | Function |
+|----|----------|
+| GPIO 12 | Out | Gate Close Relay |
+| GPIO 14 | Out | Gate Stop Relay |
+| GPIO 15 | Out | Gate Open Relay |
+| GPIO 17 | Out | Red LED |
+| GPIO 5 | Out | Green LED |
+| GPIO 33 | In | Gate Lights |
+| GPIO 32 | In | Gate Lock |
+| GPIO 35 | In | External Relay |
+| GPIO 36 | In | Photo eye |
+| GPIO 4 | In | Sensor 1 |
+| GPIO 2 | In | Sensor 2 |
+
 ## Code
 
 The firmware is built on the Arduino framework using PlatformIO and implements a robust gate control system with the following key features:

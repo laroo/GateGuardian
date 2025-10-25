@@ -1,385 +1,385 @@
-/**
- * MQTTManager.cpp - ESP32 Swing Gate Controller MQTT Manager Implementation
- *
- * Implementation of MQTT communication over Ethernet for remote gate control
- * and status reporting using W5500 Ethernet shield and PubSubClient library.
- */
+// /**
+//  * MQTTManager.cpp - ESP32 Swing Gate Controller MQTT Manager Implementation
+//  *
+//  * Implementation of MQTT communication over Ethernet for remote gate control
+//  * and status reporting using W5500 Ethernet shield and PubSubClient library.
+//  */
 
-#include "Arduino.h"
-#include "mqttmanager.h"
-#include <WiFi.h>
+// #include "Arduino.h"
+// #include "mqttmanager.h"
+// #include <ETH.h>
 
-// Static instance pointer for callback handling
-MQTTManager* MQTTManager::_instance = nullptr;
+// // Static instance pointer for callback handling
+// MQTTManager* MQTTManager::_instance = nullptr;
 
-// ============================================================================
-// MQTT MANAGER CLASS IMPLEMENTATION
-// ============================================================================
+// // ============================================================================
+// // MQTT MANAGER CLASS IMPLEMENTATION
+// // ============================================================================
 
-MQTTManager::MQTTManager(const char* broker, int port, const char* clientId,
-                         const char* statusTopic, const char* commandTopic)
-    : _port(port), _wifiClient(nullptr), _mqttClient(nullptr),
-      _initialized(false), _wifiConnected(false), _autoPublishEnabled(true),
-      _lastPublish(0), _lastConnectionAttempt(0), _reconnectAttempts(0),
-      _gateController(nullptr) {
+// MQTTManager::MQTTManager(const char* broker, int port, const char* clientId,
+//                          const char* statusTopic, const char* commandTopic)
+//     : _port(port), _wifiClient(nullptr), _mqttClient(nullptr),
+//       _initialized(false), _wifiConnected(false), _autoPublishEnabled(true),
+//       _lastPublish(0), _lastConnectionAttempt(0), _reconnectAttempts(0),
+//       _gateController(nullptr) {
     
-    // Copy configuration strings
-    strncpy(_broker, broker, sizeof(_broker) - 1);
-    _broker[sizeof(_broker) - 1] = '\0';
+//     // Copy configuration strings
+//     strncpy(_broker, broker, sizeof(_broker) - 1);
+//     _broker[sizeof(_broker) - 1] = '\0';
     
-    strncpy(_clientId, clientId, sizeof(_clientId) - 1);
-    _clientId[sizeof(_clientId) - 1] = '\0';
+//     strncpy(_clientId, clientId, sizeof(_clientId) - 1);
+//     _clientId[sizeof(_clientId) - 1] = '\0';
     
-    strncpy(_statusTopic, statusTopic, sizeof(_statusTopic) - 1);
-    _statusTopic[sizeof(_statusTopic) - 1] = '\0';
+//     strncpy(_statusTopic, statusTopic, sizeof(_statusTopic) - 1);
+//     _statusTopic[sizeof(_statusTopic) - 1] = '\0';
     
-    strncpy(_commandTopic, commandTopic, sizeof(_commandTopic) - 1);
-    _commandTopic[sizeof(_commandTopic) - 1] = '\0';
+//     strncpy(_commandTopic, commandTopic, sizeof(_commandTopic) - 1);
+//     _commandTopic[sizeof(_commandTopic) - 1] = '\0';
     
-    // Set static instance for callback handling
-    _instance = this;
+//     // Set static instance for callback handling
+//     _instance = this;
     
-    Serial.println("[MQTT] MQTTManager constructor called");
-}
+//     Serial.println("[MQTT] MQTTManager constructor called");
+// }
 
-MQTTManager::~MQTTManager() {
-    Serial.println("[MQTT] MQTTManager destructor called");
+// MQTTManager::~MQTTManager() {
+//     Serial.println("[MQTT] MQTTManager destructor called");
     
-    if (_mqttClient) {
-        _mqttClient->disconnect();
-        delete _mqttClient;
-    }
+//     if (_mqttClient) {
+//         _mqttClient->disconnect();
+//         delete _mqttClient;
+//     }
     
-    if (_wifiClient) {
-        delete _wifiClient;
-    }
+//     if (_wifiClient) {
+//         delete _wifiClient;
+//     }
     
-    _instance = nullptr;
-}
+//     _instance = nullptr;
+// }
 
-void MQTTManager::initialize() {
-    Serial.println("[MQTT] Initializing MQTT manager...");
+// void MQTTManager::initialize() {
+//     Serial.println("[MQTT] Initializing MQTT manager...");
     
-    // Initialize WiFi connection
-    if (!_initializeWiFi()) {
-        Serial.println("[ERROR] Failed to initialize WiFi connection");
-        return;
-    }
+//     // Initialize WiFi connection
+//     if (!_initializeWiFi()) {
+//         Serial.println("[ERROR] Failed to initialize WiFi connection");
+//         return;
+//     }
     
-    // Create MQTT client
-    _wifiClient = new WiFiClient();
+//     // Create MQTT client
+//     _wifiClient = new WiFiClient();
     
-    if (!_wifiClient) {
-        Serial.println("[ERROR] Failed to create WiFi client");
-        return;
-    }
+//     if (!_wifiClient) {
+//         Serial.println("[ERROR] Failed to create WiFi client");
+//         return;
+//     }
     
-    _mqttClient = new PubSubClient(*_wifiClient);
-    if (!_mqttClient) {
-        Serial.println("[ERROR] Failed to create MQTT client");
-        return;
-    }
+//     _mqttClient = new PubSubClient(*_wifiClient);
+//     if (!_mqttClient) {
+//         Serial.println("[ERROR] Failed to create MQTT client");
+//         return;
+//     }
     
-    // Configure MQTT client
-    _mqttClient->setServer(_broker, _port);
-    _mqttClient->setCallback(_messageCallback);
+//     // Configure MQTT client
+//     _mqttClient->setServer(_broker, _port);
+//     _mqttClient->setCallback(_messageCallback);
     
-    _initialized = true;
+//     _initialized = true;
     
-    Serial.print("[MQTT] MQTT manager initialized - Broker: ");
-    Serial.print(_broker);
-    Serial.print(":");
-    Serial.println(_port);
-    Serial.print("[MQTT] Client ID: ");
-    Serial.println(_clientId);
-    Serial.print("[MQTT] Status topic: ");
-    Serial.println(_statusTopic);
-    Serial.print("[MQTT] Command topic: ");
-    Serial.println(_commandTopic);
+//     Serial.print("[MQTT] MQTT manager initialized - Broker: ");
+//     Serial.print(_broker);
+//     Serial.print(":");
+//     Serial.println(_port);
+//     Serial.print("[MQTT] Client ID: ");
+//     Serial.println(_clientId);
+//     Serial.print("[MQTT] Status topic: ");
+//     Serial.println(_statusTopic);
+//     Serial.print("[MQTT] Command topic: ");
+//     Serial.println(_commandTopic);
     
-    // Attempt initial connection
-    connect();
-}
+//     // Attempt initial connection
+//     connect();
+// }
 
-void MQTTManager::update() {
-    if (!_initialized) return;
+// void MQTTManager::update() {
+//     if (!_initialized) return;
     
-    // Tick timers
-    _publishTimer.tick();
-    _reconnectTimer.tick();
+//     // Tick timers
+//     _publishTimer.tick();
+//     _reconnectTimer.tick();
     
-    // Handle MQTT client loop
-    if (_mqttClient && _mqttClient->connected()) {
-        _mqttClient->loop();
-    } else {
-        // Connection lost, attempt reconnection
-        unsigned long currentTime = millis();
-        if (currentTime - _lastConnectionAttempt >= 30000) { // Retry every 30 seconds
-            Serial.println("[MQTT] Connection lost, attempting reconnection...");
-            connect();
-        }
-    }
-}
+//     // Handle MQTT client loop
+//     if (_mqttClient && _mqttClient->connected()) {
+//         _mqttClient->loop();
+//     } else {
+//         // Connection lost, attempt reconnection
+//         unsigned long currentTime = millis();
+//         if (currentTime - _lastConnectionAttempt >= 30000) { // Retry every 30 seconds
+//             Serial.println("[MQTT] Connection lost, attempting reconnection...");
+//             connect();
+//         }
+//     }
+// }
 
-bool MQTTManager::connect() {
-    if (!_initialized || !_mqttClient) {
-        Serial.println("[ERROR] MQTT manager not initialized");
-        return false;
-    }
+// bool MQTTManager::connect() {
+//     if (!_initialized || !_mqttClient) {
+//         Serial.println("[ERROR] MQTT manager not initialized");
+//         return false;
+//     }
     
-    _lastConnectionAttempt = millis();
+//     _lastConnectionAttempt = millis();
     
-    Serial.print("[MQTT] Attempting to connect to broker: ");
-    Serial.print(_broker);
-    Serial.print(":");
-    Serial.println(_port);
+//     Serial.print("[MQTT] Attempting to connect to broker: ");
+//     Serial.print(_broker);
+//     Serial.print(":");
+//     Serial.println(_port);
     
-    // Attempt MQTT connection
-    bool connected = _mqttClient->connect(_clientId);
+//     // Attempt MQTT connection
+//     bool connected = _mqttClient->connect(_clientId);
     
-    if (connected) {
-        Serial.println("[MQTT] Connected to broker successfully");
-        _reconnectAttempts = 0;
+//     if (connected) {
+//         Serial.println("[MQTT] Connected to broker successfully");
+//         _reconnectAttempts = 0;
         
-        // Subscribe to command topic
-        if (_mqttClient->subscribe(_commandTopic)) {
-            Serial.print("[MQTT] Subscribed to command topic: ");
-            Serial.println(_commandTopic);
-        } else {
-            Serial.print("[ERROR] Failed to subscribe to command topic: ");
-            Serial.println(_commandTopic);
-        }
+//         // Subscribe to command topic
+//         if (_mqttClient->subscribe(_commandTopic)) {
+//             Serial.print("[MQTT] Subscribed to command topic: ");
+//             Serial.println(_commandTopic);
+//         } else {
+//             Serial.print("[ERROR] Failed to subscribe to command topic: ");
+//             Serial.println(_commandTopic);
+//         }
         
-        // Set up periodic status publishing if enabled
-        if (_autoPublishEnabled) {
-            _publishTimer.every(10000, [](void* manager) -> bool {
-                return static_cast<MQTTManager*>(manager)->_publishTimerCallback(nullptr);
-            }, this);
-            Serial.println("[MQTT] Automatic status publishing enabled (10-second interval)");
-        }
+//         // Set up periodic status publishing if enabled
+//         if (_autoPublishEnabled) {
+//             _publishTimer.every(10000, [](void* manager) -> bool {
+//                 return static_cast<MQTTManager*>(manager)->_publishTimerCallback(nullptr);
+//             }, this);
+//             Serial.println("[MQTT] Automatic status publishing enabled (10-second interval)");
+//         }
         
-        _logConnectionStatus();
+//         _logConnectionStatus();
         
-    } else {
-        _reconnectAttempts++;
-        Serial.print("[ERROR] MQTT connection failed, rc=");
-        Serial.print(_mqttClient->state());
-        Serial.print(", attempt #");
-        Serial.println(_reconnectAttempts);
+//     } else {
+//         _reconnectAttempts++;
+//         Serial.print("[ERROR] MQTT connection failed, rc=");
+//         Serial.print(_mqttClient->state());
+//         Serial.print(", attempt #");
+//         Serial.println(_reconnectAttempts);
         
-        // Set up reconnection timer if not already running
-        if (_reconnectAttempts == 1) {
-            _reconnectTimer.every(30000, [](void* manager) -> bool {
-                return static_cast<MQTTManager*>(manager)->_reconnectTimerCallback(nullptr);
-            }, this);
-        }
-    }
+//         // Set up reconnection timer if not already running
+//         if (_reconnectAttempts == 1) {
+//             _reconnectTimer.every(30000, [](void* manager) -> bool {
+//                 return static_cast<MQTTManager*>(manager)->_reconnectTimerCallback(nullptr);
+//             }, this);
+//         }
+//     }
     
-    return connected;
-}
+//     return connected;
+// }
 
-bool MQTTManager::publishStatus(const String& status) {
-    if (!_initialized || !_mqttClient || !_mqttClient->connected()) {
-        Serial.println("[ERROR] MQTT not connected, cannot publish status");
-        return false;
-    }
+// bool MQTTManager::publishStatus(const String& status) {
+//     if (!_initialized || !_mqttClient || !_mqttClient->connected()) {
+//         Serial.println("[ERROR] MQTT not connected, cannot publish status");
+//         return false;
+//     }
     
-    // Create status message
-    String message;
-    if (_gateController) {
-        message = _formatStatusMessage(_gateController->getState());
-    } else {
-        message = status; // Use provided status if no gate controller
-    }
+//     // Create status message
+//     String message;
+//     if (_gateController) {
+//         message = _formatStatusMessage(_gateController->getState());
+//     } else {
+//         message = status; // Use provided status if no gate controller
+//     }
     
-    // Publish message
-    bool success = _mqttClient->publish(_statusTopic, message.c_str());
+//     // Publish message
+//     bool success = _mqttClient->publish(_statusTopic, message.c_str());
     
-    if (success) {
-        _lastPublish = millis();
-    }
+//     if (success) {
+//         _lastPublish = millis();
+//     }
     
-    _logPublishEvent(message, success);
-    return success;
-}
+//     _logPublishEvent(message, success);
+//     return success;
+// }
 
-bool MQTTManager::isConnected() {
-    return _initialized && _mqttClient && _mqttClient->connected();
-}
+// bool MQTTManager::isConnected() {
+//     return _initialized && _mqttClient && _mqttClient->connected();
+// }
 
-void MQTTManager::setGateController(Gate* gate) {
-    _gateController = gate;
-    Serial.println("[MQTT] Gate controller reference set");
-}
+// void MQTTManager::setGateController(Gate* gate) {
+//     _gateController = gate;
+//     Serial.println("[MQTT] Gate controller reference set");
+// }
 
-void MQTTManager::setAutoPublish(bool enabled) {
-    _autoPublishEnabled = enabled;
-    Serial.print("[MQTT] Automatic publishing ");
-    Serial.println(enabled ? "enabled" : "disabled");
-}
+// void MQTTManager::setAutoPublish(bool enabled) {
+//     _autoPublishEnabled = enabled;
+//     Serial.print("[MQTT] Automatic publishing ");
+//     Serial.println(enabled ? "enabled" : "disabled");
+// }
 
-// ============================================================================
-// PRIVATE METHODS
-// ============================================================================
+// // ============================================================================
+// // PRIVATE METHODS
+// // ============================================================================
 
-bool MQTTManager::_initializeWiFi() {
-    Serial.println("[MQTT] Initializing WiFi connection...");
+// bool MQTTManager::_initializeWiFi() {
+//     Serial.println("[MQTT] Initializing WiFi connection...");
     
-    // WiFi credentials for Wokwi simulation
-    const char* ssid = "Wokwi-GUEST";
-    const char* password = "";
+//     // WiFi credentials for Wokwi simulation
+//     const char* ssid = "Wokwi-GUEST";
+//     const char* password = "";
     
-    // Set WiFi mode to station
-    WiFi.mode(WIFI_STA);
+//     // Set WiFi mode to station
+//     WiFi.mode(WIFI_STA);
     
-    // Begin WiFi connection
-    WiFi.begin(ssid, password);
-    Serial.print("[MQTT] Connecting to WiFi network: ");
-    Serial.println(ssid);
+//     // Begin WiFi connection
+//     WiFi.begin(ssid, password);
+//     Serial.print("[MQTT] Connecting to WiFi network: ");
+//     Serial.println(ssid);
     
-    // Wait for connection with timeout
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-        delay(500);
-        Serial.print(".");
-        attempts++;
-    }
+//     // Wait for connection with timeout
+//     int attempts = 0;
+//     while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+//         delay(500);
+//         Serial.print(".");
+//         attempts++;
+//     }
     
-    if (WiFi.status() == WL_CONNECTED) {
-        _wifiConnected = true;
-        Serial.println();
-        Serial.println("[MQTT] WiFi connected successfully!");
+//     if (WiFi.status() == WL_CONNECTED) {
+//         _wifiConnected = true;
+//         Serial.println();
+//         Serial.println("[MQTT] WiFi connected successfully!");
         
-        // Print network configuration
-        Serial.print("[MQTT] IP address: ");
-        Serial.println(WiFi.localIP());
-        Serial.print("[MQTT] Gateway: ");
-        Serial.println(WiFi.gatewayIP());
-        Serial.print("[MQTT] Subnet mask: ");
-        Serial.println(WiFi.subnetMask());
-        Serial.print("[MQTT] DNS server: ");
-        Serial.println(WiFi.dnsIP());
-        Serial.print("[MQTT] RSSI: ");
-        Serial.print(WiFi.RSSI());
-        Serial.println(" dBm");
-    } else {
-        _wifiConnected = false;
-        Serial.println();
-        Serial.println("[ERROR] Failed to connect to WiFi");
-        Serial.print("[ERROR] WiFi status: ");
-        Serial.println(WiFi.status());
-    }
+//         // Print network configuration
+//         Serial.print("[MQTT] IP address: ");
+//         Serial.println(WiFi.localIP());
+//         Serial.print("[MQTT] Gateway: ");
+//         Serial.println(WiFi.gatewayIP());
+//         Serial.print("[MQTT] Subnet mask: ");
+//         Serial.println(WiFi.subnetMask());
+//         Serial.print("[MQTT] DNS server: ");
+//         Serial.println(WiFi.dnsIP());
+//         Serial.print("[MQTT] RSSI: ");
+//         Serial.print(WiFi.RSSI());
+//         Serial.println(" dBm");
+//     } else {
+//         _wifiConnected = false;
+//         Serial.println();
+//         Serial.println("[ERROR] Failed to connect to WiFi");
+//         Serial.print("[ERROR] WiFi status: ");
+//         Serial.println(WiFi.status());
+//     }
     
-    return _wifiConnected;
-}
+//     return _wifiConnected;
+// }
 
-void MQTTManager::_onMessageReceived(char* topic, byte* payload, unsigned int length) {
-    // Convert payload to string
-    String command;
-    command.reserve(length + 1);
-    for (unsigned int i = 0; i < length; i++) {
-        command += (char)payload[i];
-    }
+// void MQTTManager::_onMessageReceived(char* topic, byte* payload, unsigned int length) {
+//     // Convert payload to string
+//     String command;
+//     command.reserve(length + 1);
+//     for (unsigned int i = 0; i < length; i++) {
+//         command += (char)payload[i];
+//     }
     
-    Serial.print("[MQTT] Message received on topic: ");
-    Serial.println(topic);
-    Serial.print("[MQTT] Payload: ");
-    Serial.println(command);
+//     Serial.print("[MQTT] Message received on topic: ");
+//     Serial.println(topic);
+//     Serial.print("[MQTT] Payload: ");
+//     Serial.println(command);
     
-    // Handle command if it's on the command topic
-    if (strcmp(topic, _commandTopic) == 0) {
-        _handleCommand(command);
-    }
-}
+//     // Handle command if it's on the command topic
+//     if (strcmp(topic, _commandTopic) == 0) {
+//         _handleCommand(command);
+//     }
+// }
 
-void MQTTManager::_messageCallback(char* topic, byte* payload, unsigned int length) {
-    if (_instance) {
-        _instance->_onMessageReceived(topic, payload, length);
-    }
-}
+// void MQTTManager::_messageCallback(char* topic, byte* payload, unsigned int length) {
+//     if (_instance) {
+//         _instance->_onMessageReceived(topic, payload, length);
+//     }
+// }
 
-bool MQTTManager::_publishTimerCallback(void* argument) {
-    // Publish current gate status
-    if (_gateController && isConnected()) {
-        publishStatus(_gateController->getStateString());
-    }
-    return true; // Continue periodic publishing
-}
+// bool MQTTManager::_publishTimerCallback(void* argument) {
+//     // Publish current gate status
+//     if (_gateController && isConnected()) {
+//         publishStatus(_gateController->getStateString());
+//     }
+//     return true; // Continue periodic publishing
+// }
 
-bool MQTTManager::_reconnectTimerCallback(void* argument) {
-    // Attempt reconnection
-    if (!isConnected()) {
-        connect();
-    }
+// bool MQTTManager::_reconnectTimerCallback(void* argument) {
+//     // Attempt reconnection
+//     if (!isConnected()) {
+//         connect();
+//     }
     
-    // Stop timer if connected, continue if still disconnected
-    return !isConnected();
-}
+//     // Stop timer if connected, continue if still disconnected
+//     return !isConnected();
+// }
 
-void MQTTManager::_handleCommand(const String& command) {
-    _logCommandReceived(command);
+// void MQTTManager::_handleCommand(const String& command) {
+//     _logCommandReceived(command);
     
-    if (!_gateController) {
-        Serial.println("[ERROR] No gate controller available for command handling");
-        return;
-    }
+//     if (!_gateController) {
+//         Serial.println("[ERROR] No gate controller available for command handling");
+//         return;
+//     }
     
-    // Parse and execute command (Requirements 7.4, 4.2)
-    String upperCommand = command;
-    upperCommand.toUpperCase();
-    upperCommand.trim();
+//     // Parse and execute command (Requirements 7.4, 4.2)
+//     String upperCommand = command;
+//     upperCommand.toUpperCase();
+//     upperCommand.trim();
     
-    if (upperCommand == "OPEN") {
-        Serial.println("[MQTT] Executing OPEN command");
-        _gateController->openGate();
-    } else if (upperCommand == "CLOSE") {
-        Serial.println("[MQTT] Executing CLOSE command");
-        _gateController->closeGate();
-    } else if (upperCommand == "TOGGLE") {
-        Serial.println("[MQTT] Executing TOGGLE command");
-        _gateController->toggle();
-    } else {
-        Serial.print("[ERROR] Unknown MQTT command: ");
-        Serial.println(command);
-    }
-}
+//     if (upperCommand == "OPEN") {
+//         Serial.println("[MQTT] Executing OPEN command");
+//         _gateController->openGate();
+//     } else if (upperCommand == "CLOSE") {
+//         Serial.println("[MQTT] Executing CLOSE command");
+//         _gateController->closeGate();
+//     } else if (upperCommand == "TOGGLE") {
+//         Serial.println("[MQTT] Executing TOGGLE command");
+//         _gateController->toggle();
+//     } else {
+//         Serial.print("[ERROR] Unknown MQTT command: ");
+//         Serial.println(command);
+//     }
+// }
 
-String MQTTManager::_formatStatusMessage(GateState state) {
-    // Create JSON-formatted status message as per design document
-    String message = "{";
-    message += "\"device_id\":\"" + String(_clientId) + "\",";
-    message += "\"timestamp\":" + String(millis() / 1000) + ",";
-    message += "\"state\":\"" + String(_gateController ? _gateController->getStateString() : "UNKNOWN") + "\",";
-    message += "\"sensor_raw\":" + String(_gateController ? "true" : "false") + ",";
-    message += "\"uptime\":" + String(millis() / 1000);
-    message += "}";
+// String MQTTManager::_formatStatusMessage(GateState state) {
+//     // Create JSON-formatted status message as per design document
+//     String message = "{";
+//     message += "\"device_id\":\"" + String(_clientId) + "\",";
+//     message += "\"timestamp\":" + String(millis() / 1000) + ",";
+//     message += "\"state\":\"" + String(_gateController ? _gateController->getStateString() : "UNKNOWN") + "\",";
+//     message += "\"sensor_raw\":" + String(_gateController ? "true" : "false") + ",";
+//     message += "\"uptime\":" + String(millis() / 1000);
+//     message += "}";
     
-    return message;
-}
+//     return message;
+// }
 
-void MQTTManager::_logConnectionStatus() {
-    Serial.println("[MQTT] Connection status:");
-    Serial.print("  WiFi: ");
-    Serial.println(_wifiConnected ? "Connected" : "Disconnected");
-    Serial.print("  MQTT: ");
-    Serial.println(isConnected() ? "Connected" : "Disconnected");
-    Serial.print("  Broker: ");
-    Serial.print(_broker);
-    Serial.print(":");
-    Serial.println(_port);
-}
+// void MQTTManager::_logConnectionStatus() {
+//     Serial.println("[MQTT] Connection status:");
+//     Serial.print("  WiFi: ");
+//     Serial.println(_wifiConnected ? "Connected" : "Disconnected");
+//     Serial.print("  MQTT: ");
+//     Serial.println(isConnected() ? "Connected" : "Disconnected");
+//     Serial.print("  Broker: ");
+//     Serial.print(_broker);
+//     Serial.print(":");
+//     Serial.println(_port);
+// }
 
-void MQTTManager::_logPublishEvent(const String& message, bool success) {
-    if (success) {
-        Serial.print("[MQTT] Status published: ");
-        Serial.println(message);
-    } else {
-        Serial.print("[ERROR] Failed to publish status: ");
-        Serial.println(message);
-    }
-}
+// void MQTTManager::_logPublishEvent(const String& message, bool success) {
+//     if (success) {
+//         Serial.print("[MQTT] Status published: ");
+//         Serial.println(message);
+//     } else {
+//         Serial.print("[ERROR] Failed to publish status: ");
+//         Serial.println(message);
+//     }
+// }
 
-void MQTTManager::_logCommandReceived(const String& command) {
-    Serial.print("[MQTT] Command received: ");
-    Serial.println(command);
-}
+// void MQTTManager::_logCommandReceived(const String& command) {
+//     Serial.print("[MQTT] Command received: ");
+//     Serial.println(command);
+// }
