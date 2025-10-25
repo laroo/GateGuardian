@@ -27,6 +27,9 @@ EMACDriver driver(ETH_PHY_LAN8720, 23, 18, 16);   // note powerPin = 16 required
 // EMACDriver driver(ETH_PHY_LAN8720, ETH_PHY_MDC, ETH_PHY_MDIO, ETH_PHY_POWER);
 // EthernetClient   ethClient;
 
+EthernetClient ethClient;
+WiFiClient wifiClient;
+
 WebServer server(80);
 
 // ============================================================================
@@ -147,15 +150,34 @@ void setup() {
 
   Ethernet.init(driver);
 
+  Serial.print("Link 1: ");
+  Serial.println(Ethernet.linkStatus()); //Prints 2 = LinkOFF, as expected
+
+
   Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin()) {
     Serial.print("  DHCP assigned IP ");
     Serial.println(Ethernet.localIP());
   } else {
     Serial.println("Failed to configure Ethernet using DHCP");
-    while (true) {
-      delay(1);
-    }
+    // while (true) {
+    //   delay(1);
+    // }
+  }
+
+  Serial.print("Link 2: ");
+  Serial.println(Ethernet.linkStatus()); //prints 1 = LinkON, even with no cable plugged in
+
+  // Check for Ethernet hardware present
+  if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+    Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+    // while (true) {
+    //   delay(1); // do nothing, no point running without Ethernet hardware
+    // }
+  }
+  if (Ethernet.linkStatus() == LinkOFF) {
+    //This statement should print but doesn't when I test with no cable
+    Serial.println("Ethernet cable is not connected.");
   }
 
   // if (MDNS.begin("gateguardian")) {
@@ -211,12 +233,72 @@ void setup() {
   Serial.println("======================================");
 }
 
+
+
+int checkConnection() {
+  // Check if Ethernet is available
+  if(ethClient.connected() && (Ethernet.linkStatus() == LinkON))
+    return 1;
+  if (Ethernet.linkStatus() == LinkON) {
+    // Use Ethernet connection
+    Serial.println("Ethernet LINKON");
+    if (!ethClient.connected()) {
+      Serial.println("Connecting via Ethernet...");
+        // beginMicros = micros();
+        WiFi.disconnect();
+        //delay(5000);
+        return 1;
+    }
+  }
+  // else{
+  //   Serial.println("Not Successfull Ethernet Connection");
+  // }
+
+ if (WiFi.status() == WL_CONNECTED)
+    return 2;
+
+  // Use Wi-Fi connection
+  WiFi.begin("Wokwi-GUEST", "", 6);
+  Serial.println("Connecting via Wi-Fi...");
+  for (int i = 0; i < 50; i++) {
+    if ((WiFi.status() == WL_CONNECTED))
+      break;
+    delay(100);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    // Serial.print("Connected to Wi-Fi. Local IP: ");
+    // Serial.println(WiFi.localIP());
+    // Additional Wi-Fi initialization if needed
+    return 2;
+  }
+  else{
+    Serial.println("Wi-Fi not Connected");
+  }
+
+  return 0;
+}
+
 // ============================================================================
 // MAIN LOOP
 // ============================================================================
 void loop() {
-  server.handleClient();
-  ElegantOTA.loop();
+  int i = checkConnection();
+  if (i == 1) {
+    Serial.println("Connected to Ethernet");
+  }
+  else if (i == 2) {
+    Serial.println("Connected to Wi-Fi");
+  }
+  else{
+    Serial.println("Not Connected");
+  }
+
+  if (i > 0) {
+    server.handleClient();
+    ElegantOTA.loop();
+  }
 
   unsigned long loopStart = millis();
 
