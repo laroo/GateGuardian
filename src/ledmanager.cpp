@@ -5,7 +5,6 @@
  * based on gate state. Provides visual feedback for gate status.
  */
 
-#include "Arduino.h"
 #include "ledmanager.h"
 
 

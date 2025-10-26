@@ -14,8 +14,11 @@
 // ============================================================================
 const int PIN_LED_GATE_CLOSED = 17;  // Red LED: closed (blink = closing)
 const int PIN_LED_GATE_OPEN = 5;    // Green LED: open (blink = opening)
+
 const int PIN_RELAY_GATE_CLOSE = 12;  // Close relay control
 const int PIN_RELAY_GATE_OPEN = 15;   // Open relay control
+const int PIN_RELAY_GATE_STOP = 16;   // Stop relay control
+
 const int PIN_SENSOR_GATE_OPEN = 33; // Gate position sensor
 const int PIN_BUTTON = 35;           // Manual control button
 
@@ -68,17 +71,17 @@ void Gate::update() {
     
     // Read sensor state with debouncing
     unsigned long currentTime = millis();
-    if (currentTime - _lastSensorRead >= 50) { // 50ms debounce
-        bool newSensorState = _readSensor();
-        if (newSensorState != _previousSensorState) {
-            _sensorState = newSensorState;
-            _previousSensorState = newSensorState;
-            _lastSensorRead = currentTime;
+    // if (currentTime - _lastSensorRead >= 50) { // 50ms debounce
+    //     bool newSensorState = _readSensor();
+    //     if (newSensorState != _previousSensorState) {
+    //         _sensorState = newSensorState;
+    //         _previousSensorState = newSensorState;
+    //         _lastSensorRead = currentTime;
             
-            Serial.print("[SENSOR] Sensor state changed to: ");
-            Serial.println(_sensorState ? "HIGH (closed)" : "LOW (open/moving)");
-        }
-    }
+    //         Serial.print("[SENSOR] Sensor state changed to: ");
+    //         Serial.println(_sensorState ? "HIGH (closed)" : "LOW (open/moving)");
+    //     }
+    // }
     
     // Safety check: ensure relay is deactivated after 500ms even if timer fails
     if (_relayActive && (currentTime - _relayActivationTime >= 500)) {
@@ -200,6 +203,28 @@ void Gate::toggle() {
     }
 }
 
+
+void Gate::stopGate() {
+    Serial.println("[BUTTON] Button pressed - Gate command: STOP");
+    
+    if (!_initialized) {
+        Serial.println("[ERROR] Gate not initialized, ignoring stop command");
+        return;
+    }
+    
+    // Prevent activation while relay is active
+    if (_relayActive) {
+        Serial.println("[GATE] Relay is active, ignoring stop command");
+        return;
+    }
+    
+    // Activate open relay for 500ms
+    _activateRelay(PIN_RELAY_GATE_STOP, "Stop");
+    
+    // Update state to opening
+    // _updateGateState(GATE_OPENING);
+}
+
 void Gate::openGate() {
     Serial.println("[BUTTON] Button pressed - Gate command: OPEN");
     
@@ -209,10 +234,10 @@ void Gate::openGate() {
     }
     
     // Only allow opening if gate is closed
-    if (_currentState != GATE_CLOSED) {
-        Serial.println("[GATE] Gate is not closed, cannot open");
-        return;
-    }
+    // if (_currentState != GATE_CLOSED) {
+    //     Serial.println("[GATE] Gate is not closed, cannot open");
+    //     return;
+    // }
     
     // Prevent activation while relay is active
     if (_relayActive) {
@@ -236,10 +261,10 @@ void Gate::closeGate() {
     }
     
     // Only allow closing if gate is open
-    if (_currentState != GATE_OPEN) {
-        Serial.println("[GATE] Gate is not open, cannot close");
-        return;
-    }
+    // if (_currentState != GATE_OPEN) {
+    //     Serial.println("[GATE] Gate is not open, cannot close");
+    //     return;
+    // }
     
     // Prevent activation while relay is active
     if (_relayActive) {
@@ -336,6 +361,7 @@ void Gate::_deactivateRelays() {
     // Deactivate both relays to be safe
     digitalWrite(PIN_RELAY_GATE_OPEN, LOW);
     digitalWrite(PIN_RELAY_GATE_CLOSE, LOW);
+    digitalWrite(PIN_RELAY_GATE_STOP, LOW);
     
     if (_relayActive) {
         unsigned long activeDuration = millis() - _relayActivationTime;

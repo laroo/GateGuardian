@@ -43,7 +43,7 @@ Gerber files for the PCB can be found [here](librepcb/output/v1.1/gerber).
 | GPIO 32 | Input | Gate Lock | Enabled when gate is closed |
 | GPIO 35 | Input | External Relay | Triggered when gate is closed |
 | GPIO 36 | Input | Photo eye | When someone/omething goes through the gate |
-| GPIO 4 | Input | Sensor 1 | Optional sensor (not used) |
+| GPIO 4 | Input | Sensor 1 | Optional sensor (dht22 temperature sensor) |
 | GPIO 2 | Input | Sensor 2 | Optional sensor (not used) |
 
 ## Code

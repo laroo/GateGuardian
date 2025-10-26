@@ -18,10 +18,13 @@
 #include <WebServer.h>
 #include <ElegantOTA.h>
 
+#include "esp32-hal-gpio.h"
 #include "gate.h"
 #include "ledmanager.h"
 // #include "mqttmanager.h"
 #include <SPI.h>
+#include <Network.h>
+// #include <Debounce16.h>
 
 EMACDriver driver(ETH_PHY_LAN8720, 23, 18, 16);   // note powerPin = 16 required
 // EMACDriver driver(ETH_PHY_LAN8720, ETH_PHY_MDC, ETH_PHY_MDIO, ETH_PHY_POWER);
@@ -31,6 +34,73 @@ EthernetClient ethClient;
 WiFiClient wifiClient;
 
 WebServer server(80);
+
+// Connection check result (used by network event handler)
+int connectionStatus = 0;
+
+// ============================================================================
+// NETWORK EVENT HANDLER
+// ============================================================================
+// WARNING: This function is called from a separate FreeRTOS task (thread)!
+void onNetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
+  Serial.printf("[Network-event] event: %d\n", event);
+
+  switch (event) {
+    case ARDUINO_EVENT_ETH_START:
+      Serial.println("[ETH] Ethernet started");
+      break;
+    case ARDUINO_EVENT_ETH_STOP:
+      Serial.println("[ETH] Ethernet stopped");
+      break;
+    case ARDUINO_EVENT_ETH_CONNECTED:
+      Serial.println("[ETH] Ethernet connected - Link UP");
+      break;
+    case ARDUINO_EVENT_ETH_DISCONNECTED:
+      Serial.println("[ETH] Ethernet disconnected - Link DOWN");
+      connectionStatus = 0;
+      break;
+    case ARDUINO_EVENT_ETH_GOT_IP:
+      Serial.print("[ETH] Obtained IP address: ");
+      Serial.println(IPAddress(info.got_ip.ip_info.ip.addr));
+      Serial.print("[ETH] Gateway: ");
+      Serial.println(IPAddress(info.got_ip.ip_info.gw.addr));
+      Serial.print("[ETH] Netmask: ");
+      Serial.println(IPAddress(info.got_ip.ip_info.netmask.addr));
+      connectionStatus = 1;
+      break;
+    case ARDUINO_EVENT_ETH_GOT_IP6:
+      Serial.println("[ETH] Ethernet IPv6 is preferred");
+      break;
+    case ARDUINO_EVENT_WIFI_STA_START:
+      Serial.println("[WiFi] WiFi client started");
+      break;
+    case ARDUINO_EVENT_WIFI_STA_STOP:
+      Serial.println("[WiFi] WiFi client stopped");
+      break;
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+      Serial.println("[WiFi] Connected to access point");
+      break;
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("[WiFi] Disconnected from WiFi access point");
+      if (connectionStatus == 2) {
+        connectionStatus = 0;
+      }
+      break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.print("[WiFi] Obtained IP address: ");
+      Serial.println(IPAddress(info.got_ip.ip_info.ip.addr));
+      connectionStatus = 2;
+      break;
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+      Serial.println("[WiFi] Lost IP address");
+      if (connectionStatus == 2) {
+        connectionStatus = 0;
+      }
+      break;
+    default:
+      break;
+  }
+}
 
 // ============================================================================
 // CONFIGURATION STRUCTURE
@@ -51,19 +121,21 @@ struct Config {
   unsigned long debounceTime = 50;         // 50ms button debounce
 
   // GPIO Pins
-  int buttonPin = 35;
-  int sensorPin = 33;
   int redLedPin = 17;
   int greenLedPin = 5;
+
+  int gateLightsPin = 33;
+  int gateLockPin = 32;
+  int externalRelayPin = 35;  // Input only
+  int photoEyePin = 36;  // Input only
+
+  int sensor1Pin = 4;
+  int sensor2Pin = 2;
+
   int openRelayPin = 15;
   int closeRelayPin = 12;
   int stopRelayPin = 14;
 
-  // Ethernet SPI Pins
-  // int ethernetCSPin = 5;
-  // int ethernetMOSIPin = 23;
-  // int ethernetMISOPin = 19;
-  // int ethernetSCKPin = 18;
 };
 
 // ============================================================================
@@ -86,17 +158,40 @@ bool currentButtonState = HIGH;
 unsigned long lastButtonChange = 0;
 bool buttonPressed = false; // Flag to track button press events
 
+// Debounce16 gateLightsButton(config.gateLightsPin, LOW);
+// Debounce16 gateLockButton(config.gateLockPin, LOW);
+// Debounce16 externalRelayButton(config.externalRelayPin, LOW);
+// Debounce16 photoEyeButton(config.photoEyePin, LOW);
+
+
 // ============================================================================
 // FUNCTION DECLARATIONS
 // ============================================================================
 void initializeGPIO();
-void handleButtonInput();
+// void handleButtonInput();
 void printConfigSummary();
+int checkConnection();
+bool checkConnectionCallback(void *);
+bool reportConnectionStatusCallback(void *);
+bool checkInputCallback(void *);
+
+void onButtonPress() {
+    Serial.println("!!!!!!! Button pressed!");
+}
+
+void onButtonRelease() {
+    Serial.println("!!!!!!! Button released!");
+}
+
 
 // ============================================================================
 // SETUP FUNCTION
 // ============================================================================
 void setup() {
+  
+  // Initialize GPIO pins (Requirement 5.1)
+  initializeGPIO();
+
   // Initialize serial communication at 115200 baud (Requirement 4.1)
   Serial.begin(115200);
   delay(100); // Allow serial to initialize
@@ -113,14 +208,25 @@ void setup() {
   Serial.print("[INIT] MQTT Client ID: ");
   Serial.println(config.clientId);
 
-  // Initialize GPIO pins (Requirement 5.1)
-  initializeGPIO();
 
+  // gateLightsButton.onPress(onButtonPress);
+  // gateLightsButton.onRelease(onButtonRelease);
+
+  // gateLockButton.onPress(onButtonPress);
+  // gateLockButton.onRelease(onButtonRelease);
+
+  // externalRelayButton.onPress(onButtonPress);
+  // externalRelayButton.onRelease(onButtonRelease);
+
+  // photoEyeButton.onPress(onButtonPress);
+  // photoEyeButton.onRelease(onButtonRelease);
+
+  
   // Initialize button state after GPIO configuration
-  lastButtonState = digitalRead(config.buttonPin);
-  currentButtonState = lastButtonState;
-  Serial.print("[INIT] Initial button state: ");
-  Serial.println(lastButtonState ? "HIGH (not pressed)" : "LOW (pressed)");
+  // lastButtonState = digitalRead(config.buttonPin);
+  // currentButtonState = lastButtonState;
+  // Serial.print("[INIT] Initial button state: ");
+  // Serial.println(lastButtonState ? "HIGH (not pressed)" : "LOW (pressed)");
 
   // Initialize Gate controller
   gate = new Gate();
@@ -147,6 +253,10 @@ void setup() {
   } else {
     Serial.println("[ERROR] Failed to initialize LED manager");
   }
+
+  // Register network event listener
+  Network.onEvent(onNetworkEvent);
+  Serial.println("[INIT] Network event listener registered");
 
   Ethernet.init(driver);
 
@@ -213,10 +323,14 @@ void setup() {
     gate->openGate();
     server.send(200, "text/plain", "Gate opening...");
   });
-  server.on("/gate/toggle", []() {
-    gate->toggle();
-    server.send(200, "text/plain", "Gate toggling...");
+  server.on("/gate/stop", []() {
+    gate->stopGate();
+    server.send(200, "text/plain", "Gate stopping...");
   });
+  // server.on("/gate/toggle", []() {
+  //   gate->toggle();
+  //   server.send(200, "text/plain", "Gate toggling...");
+  // });
   
   // server.on("/gate/stop", []() {
   //   gate->stop();
@@ -229,17 +343,71 @@ void setup() {
   // Print configuration summary
   printConfigSummary();
 
+  // Schedule checkConnection to run every 1000ms (1 second)
+  mainTimer.every(1000, checkConnectionCallback);
+  Serial.println("[INIT] Connection check scheduled every 1 second");
+
+  // Schedule input to run every 1000ms
+  mainTimer.every(1000, checkInputCallback);
+  Serial.println("[INIT] input check scheduled every 1 second");
+
+
+  // Schedule connection status reporting every 2000ms (2 seconds)
+  mainTimer.every(2000, reportConnectionStatusCallback);
+  Serial.println("[INIT] Connection status reporting scheduled every 2 seconds");
+
   Serial.println("[INIT] System initialization complete");
   Serial.println("======================================");
 }
 
 
+bool checkInputCallback(void *) {
+    Serial.print("Gatelight:     ");
+    Serial.println(digitalRead(config.gateLightsPin));
+
+    Serial.print("GateLock:      ");
+    Serial.println(digitalRead(config.gateLockPin));
+
+    Serial.print("ExternalRelay: ");
+    Serial.println(digitalRead(config.externalRelayPin));
+
+    Serial.print("PhotoEye:      ");
+    Serial.println(digitalRead(config.photoEyePin));
+
+    // Serial.print("Gatelight debounce: ");
+    // Serial.println(gateLightsButton.isPressed());
+
+  return true; // Repeat the timer
+}
+
+
+// Timer callback for connection checking
+bool checkConnectionCallback(void *) {
+  connectionStatus = checkConnection();
+  return true; // Repeat the timer
+}
+
+// Timer callback for reporting connection status
+bool reportConnectionStatusCallback(void *) {
+  if (connectionStatus == 1) {
+    Serial.println("Connected to Ethernet");
+  }
+  else if (connectionStatus == 2) {
+    Serial.println("Connected to Wi-Fi");
+  }
+  else {
+    Serial.println("Not Connected");
+  }
+  return true; // Repeat the timer
+}
 
 int checkConnection() {
   // Check if Ethernet is available
-  if(ethClient.connected() && (Ethernet.linkStatus() == LinkON))
+  if(ethClient.connected() && (Ethernet.linkStatus() == LinkON)) {
+    Serial.println("Existing Ethernet connection");
     return 1;
-  if (Ethernet.linkStatus() == LinkON) {
+  }
+  else if (Ethernet.linkStatus() == LinkON) {
     // Use Ethernet connection
     Serial.println("Ethernet LINKON");
     if (!ethClient.connected()) {
@@ -255,6 +423,7 @@ int checkConnection() {
   // }
 
  if (WiFi.status() == WL_CONNECTED)
+    Serial.print("Existing Wi-Fi connection");
     return 2;
 
   // Use Wi-Fi connection
@@ -268,7 +437,7 @@ int checkConnection() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    // Serial.print("Connected to Wi-Fi. Local IP: ");
+    Serial.print("Connected to Wi-Fi ");
     // Serial.println(WiFi.localIP());
     // Additional Wi-Fi initialization if needed
     return 2;
@@ -284,18 +453,22 @@ int checkConnection() {
 // MAIN LOOP
 // ============================================================================
 void loop() {
-  int i = checkConnection();
-  if (i == 1) {
-    Serial.println("Connected to Ethernet");
-  }
-  else if (i == 2) {
-    Serial.println("Connected to Wi-Fi");
-  }
-  else{
-    Serial.println("Not Connected");
-  }
 
-  if (i > 0) {
+    static unsigned long lastUpdate = 0;
+
+    // Update button state every 1ms
+    if (millis() - lastUpdate >= 1) {
+        lastUpdate = millis();
+        // gateLightsButton.update();
+        // gateLockButton.update();
+        // externalRelayButton.update();
+        // photoEyeButton.update();    
+    }
+
+
+
+  // Connection status is now reported by timer callback every 2 seconds
+  if (connectionStatus > 0) {
     server.handleClient();
     ElegantOTA.loop();
   }
@@ -303,7 +476,7 @@ void loop() {
   unsigned long loopStart = millis();
 
   // Handle button input with debouncing
-  handleButtonInput();
+  // handleButtonInput();
 
   // Update gate controller
   if (gate) {
@@ -350,32 +523,12 @@ void loop() {
 // GPIO INITIALIZATION
 // ============================================================================
 void initializeGPIO() {
-  Serial.println("[INIT] Configuring GPIO pins...");
-
-  // Configure button input with internal pull-up
-  pinMode(config.buttonPin, INPUT);
-  Serial.print("[INIT] Button pin ");
-  Serial.print(config.buttonPin);
-  Serial.println(" configured as INPUT_PULLUP");
-  Serial.print("[INIT] Current button state: ");
-  Serial.println(digitalRead(config.buttonPin));
-
-  // Configure sensor input with internal pull-up
-  pinMode(config.sensorPin, INPUT_PULLUP);
-  Serial.print("[INIT] Sensor pin ");
-  Serial.print(config.sensorPin);
-  Serial.println(" configured as INPUT_PULLUP");
 
   // Configure LED outputs
   pinMode(config.redLedPin, OUTPUT);
   pinMode(config.greenLedPin, OUTPUT);
   digitalWrite(config.redLedPin, LOW);
   digitalWrite(config.greenLedPin, LOW);
-  Serial.print("[INIT] LED pins ");
-  Serial.print(config.redLedPin);
-  Serial.print(" and ");
-  Serial.print(config.greenLedPin);
-  Serial.println(" configured as OUTPUT");
 
   // Configure relay outputs
   pinMode(config.openRelayPin, OUTPUT);
@@ -384,78 +537,80 @@ void initializeGPIO() {
   digitalWrite(config.openRelayPin, LOW);
   digitalWrite(config.closeRelayPin, LOW);
   digitalWrite(config.stopRelayPin, LOW);
-  Serial.print("[INIT] Relay pins: ");
-  Serial.print(config.openRelayPin);
-  Serial.print(", ");
-  Serial.print(config.closeRelayPin);
-  Serial.print(", ");
-  Serial.print(config.stopRelayPin);
-  Serial.println(" configured as OUTPUT");
+  
+  // Configure sensor input with internal pull-up  
+  pinMode(config.gateLightsPin, INPUT_PULLUP);
+  pinMode(config.gateLockPin, INPUT_PULLUP);
+  pinMode(config.externalRelayPin, INPUT);
+  pinMode(config.photoEyePin, INPUT);
 
-  Serial.println("[INIT] GPIO pins configured successfully");
+  // Configure sensor input with internal pull-up
+  pinMode(config.sensor1Pin, INPUT_PULLUP);
+  pinMode(config.sensor2Pin, INPUT_PULLUP);
+  
 }
 
 // ============================================================================
 // BUTTON INPUT HANDLING
 // ============================================================================
-void handleButtonInput() {
-  currentButtonState = digitalRead(config.buttonPin);
-  unsigned long currentTime = millis();
+// void handleButtonInput() {
+//   currentButtonState = digitalRead(config.buttonPin);
+//   unsigned long currentTime = millis();
 
-  // Debug: Log button state changes (remove this in production)
-  static unsigned long lastDebugTime = 0;
-  if (currentTime - lastDebugTime > 500) { // Every 5 seconds
-    Serial.print("[DEBUG] Button state: ");
-    Serial.print(currentButtonState ? "HIGH" : "LOW");
-    Serial.print(", Gate state: ");
-    if (gate) {
-      Serial.println(gate->getStateString());
-    } else {
-      Serial.println("NULL");
-    }
-    lastDebugTime = currentTime;
-  }
+//   // Debug: Log button state changes (remove this in production)
+//   static unsigned long lastDebugTime = 0;
+//   if (currentTime - lastDebugTime > 500) { // Every 5 seconds
+//     Serial.print("[DEBUG] Button state: ");
+//     Serial.print(currentButtonState ? "HIGH" : "LOW");
+//     Serial.print(", Gate state: ");
+//     if (gate) {
+//       Serial.println(gate->getStateString());
+//     } else {
+//       Serial.println("NULL");
+//     }
+//     lastDebugTime = currentTime;
+//   }
 
-  // Check if button state changed and debounce time has passed
-  // (Requirement 1.3, 4.3, 5.3)
-  if (currentButtonState != lastButtonState &&
-      (currentTime - lastButtonChange) >= config.debounceTime) {
+//   // Check if button state changed and debounce time has passed
+//   // (Requirement 1.3, 4.3, 5.3)
+//   if (currentButtonState != lastButtonState &&
+//       (currentTime - lastButtonChange) >= config.debounceTime) {
 
-    lastButtonChange = currentTime;
-    lastButtonState = currentButtonState;
+//     lastButtonChange = currentTime;
+//     lastButtonState = currentButtonState;
 
-    Serial.print("[BUTTON] Button state changed to: ");
-    Serial.println(currentButtonState ? "HIGH (released)" : "LOW (pressed)");
+//     Serial.print("[BUTTON] Button state changed to: ");
+//     Serial.println(currentButtonState ? "HIGH (released)" : "LOW (pressed)");
 
-    // Button pressed (LOW due to pull-up resistor)
-    if (currentButtonState == LOW) {
-      buttonPressed = true;
-      Serial.println("[BUTTON] Button pressed - debounced");
+//     // Button pressed (LOW due to pull-up resistor)
+//     if (currentButtonState == LOW) {
+//       buttonPressed = true;
+//       Serial.println("[BUTTON] Button pressed - debounced");
 
-      // Check if gate is available and not during relay activation
-      // (Requirements 1.1, 1.2, 4.3)
-      if (gate) {
-        // Prevent button actions during relay activation periods
-        if (gate->isRelayActive()) {
-          Serial.println("[BUTTON] Relay is active, button action ignored");
-        } else if (gate->isMoving()) {
-          Serial.println("[BUTTON] Gate is moving, button action ignored");
-        } else {
-          Serial.println("[BUTTON] Triggering gate toggle");
-          gate->toggle();
-        }
-      } else {
-        Serial.println("[ERROR] Gate controller not available");
-      }
-    } else {
-      // Button released (HIGH due to pull-up resistor)
-      if (buttonPressed) {
-        buttonPressed = false;
-        Serial.println("[BUTTON] Button released - debounced");
-      }
-    }
-  }
-}
+//       // Check if gate is available and not during relay activation
+//       // (Requirements 1.1, 1.2, 4.3)
+//       if (gate) {
+//         // Prevent button actions during relay activation periods
+//         if (gate->isRelayActive()) {
+//           Serial.println("[BUTTON] Relay is active, button action ignored");
+//         } else if (gate->isMoving()) {
+//           Serial.println("[BUTTON] Gate is moving, button action ignored");
+//         } else {
+//           Serial.println("[BUTTON] Triggering gate toggle");
+//           gate->toggle();
+//         }
+//       } else {
+//         Serial.println("[ERROR] Gate controller not available");
+//       }
+//     } else {
+//       // Button released (HIGH due to pull-up resistor)
+//       if (buttonPressed) {
+//         buttonPressed = false;
+//         Serial.println("[BUTTON] Button released - debounced");
+//       }
+//     }
+//   }
+// }
 
 // ============================================================================
 // CONFIGURATION SUMMARY

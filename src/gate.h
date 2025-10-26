@@ -21,6 +21,7 @@ extern const int PIN_LED_GATE_OPEN;    // Green LED: open (blink = opening)
 // Relay Controls
 extern const int PIN_RELAY_GATE_CLOSE; // Close relay control
 extern const int PIN_RELAY_GATE_OPEN;  // Open relay control
+extern const int PIN_RELAY_GATE_STOP;  // Stop relay control
 
 // Sensor Input
 extern const int PIN_SENSOR_GATE_OPEN;  // High when gate is closed; Low when gate is: open, opening or closing
@@ -72,6 +73,12 @@ public:
      */
     void toggle();
     
+    /**
+     * Command gate to stop
+     * Only effective if gate is currently moving
+     */
+    void stopGate();
+
     /**
      * Command gate to open
      * Only effective if gate is currently closed
