@@ -18,6 +18,9 @@
 #include <WebServer.h>
 #include <ElegantOTA.h>
 
+#include <PubSubClient.h>
+
+
 #include "esp32-hal-gpio.h"
 #include "gate.h"
 #include "ledmanager.h"
@@ -32,6 +35,12 @@ EMACDriver driver(ETH_PHY_LAN8720, 23, 18, 16);   // note powerPin = 16 required
 
 EthernetClient ethClient;
 WiFiClient wifiClient;
+
+// Pointer to the active client (Ethernet or WiFi)
+NetworkClient* activeClient = nullptr;
+
+// MQTT client - will be configured with activeClient dynamically
+PubSubClient mqttClient;
 
 WebServer server(80);
 
@@ -58,6 +67,7 @@ void onNetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_ETH_DISCONNECTED:
       Serial.println("[ETH] Ethernet disconnected - Link DOWN");
       connectionStatus = 0;
+      activeClient = nullptr;
       break;
     case ARDUINO_EVENT_ETH_GOT_IP:
       Serial.print("[ETH] Obtained IP address: ");
@@ -67,6 +77,7 @@ void onNetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
       Serial.print("[ETH] Netmask: ");
       Serial.println(IPAddress(info.got_ip.ip_info.netmask.addr));
       connectionStatus = 1;
+      activeClient = &ethClient;
       break;
     case ARDUINO_EVENT_ETH_GOT_IP6:
       Serial.println("[ETH] Ethernet IPv6 is preferred");
@@ -84,17 +95,20 @@ void onNetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
       Serial.println("[WiFi] Disconnected from WiFi access point");
       if (connectionStatus == 2) {
         connectionStatus = 0;
+        activeClient = nullptr;
       }
       break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       Serial.print("[WiFi] Obtained IP address: ");
       Serial.println(IPAddress(info.got_ip.ip_info.ip.addr));
       connectionStatus = 2;
+      activeClient = &wifiClient;
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
       Serial.println("[WiFi] Lost IP address");
       if (connectionStatus == 2) {
         connectionStatus = 0;
+        activeClient = nullptr;
       }
       break;
     default:
@@ -174,6 +188,7 @@ int checkConnection();
 bool checkConnectionCallback(void *);
 bool reportConnectionStatusCallback(void *);
 bool checkInputCallback(void *);
+NetworkClient* getActiveClient();
 
 void onButtonPress() {
     Serial.println("!!!!!!! Button pressed!");
@@ -183,6 +198,36 @@ void onButtonRelease() {
     Serial.println("!!!!!!! Button released!");
 }
 
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i=0;i<length;i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+}
+
+void mqttReconnect() {
+  // Loop until we're reconnected
+  while (!mqttClient.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (mqttClient.connect("arduinoClient")) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      mqttClient.publish("outTopic","hello world");
+      // ... and resubscribe
+      mqttClient.subscribe("inTopic");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
 
 // ============================================================================
 // SETUP FUNCTION
@@ -253,6 +298,11 @@ void setup() {
   } else {
     Serial.println("[ERROR] Failed to initialize LED manager");
   }
+
+
+  mqttClient.setServer(config.mqttBroker, config.mqttPort);
+  mqttClient.setCallback(mqttCallback);
+
 
   // Register network event listener
   Network.onEvent(onNetworkEvent);
@@ -405,6 +455,7 @@ int checkConnection() {
   // Check if Ethernet is available
   if(ethClient.connected() && (Ethernet.linkStatus() == LinkON)) {
     Serial.println("Existing Ethernet connection");
+    activeClient = &ethClient;
     return 1;
   }
   else if (Ethernet.linkStatus() == LinkON) {
@@ -415,6 +466,7 @@ int checkConnection() {
         // beginMicros = micros();
         WiFi.disconnect();
         //delay(5000);
+        activeClient = &ethClient;
         return 1;
     }
   }
@@ -422,9 +474,11 @@ int checkConnection() {
   //   Serial.println("Not Successfull Ethernet Connection");
   // }
 
- if (WiFi.status() == WL_CONNECTED)
-    Serial.print("Existing Wi-Fi connection");
+ if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Existing Wi-Fi connection");
+    activeClient = &wifiClient;
     return 2;
+  }
 
   // Use Wi-Fi connection
   WiFi.begin("Wokwi-GUEST", "", 6);
@@ -437,15 +491,17 @@ int checkConnection() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Connected to Wi-Fi ");
+    Serial.println("Connected to Wi-Fi ");
     // Serial.println(WiFi.localIP());
     // Additional Wi-Fi initialization if needed
+    activeClient = &wifiClient;
     return 2;
   }
   else{
     Serial.println("Wi-Fi not Connected");
   }
 
+  activeClient = nullptr;
   return 0;
 }
 
@@ -468,9 +524,23 @@ void loop() {
 
 
   // Connection status is now reported by timer callback every 2 seconds
-  if (connectionStatus > 0) {
+  if (activeClient && connectionStatus > 0) {
+
+    static unsigned long lastNetworkUpdate = 0;
+    if (millis() - lastNetworkUpdate >= 500) {
+        lastNetworkUpdate = millis(); 
+        Serial.println("Network loop!");
+    }
+
+
     server.handleClient();
     ElegantOTA.loop();
+
+    mqttClient.setClient(*activeClient);
+    if (!mqttClient.connected()) {
+      mqttReconnect();
+    }
+    mqttClient.loop();
   }
 
   unsigned long loopStart = millis();
@@ -636,4 +706,17 @@ void printConfigSummary() {
   Serial.print("  Publish Interval: ");
   Serial.print(config.publishInterval);
   Serial.println("ms");
+}
+
+// ============================================================================
+// GET ACTIVE CLIENT
+// ============================================================================
+/**
+ * Returns a pointer to the active network client (Ethernet or WiFi)
+ * based on the current connection status.
+ * 
+ * @return NetworkClient* Pointer to active client, or nullptr if no connection
+ */
+NetworkClient* getActiveClient() {
+  return activeClient;
 }
