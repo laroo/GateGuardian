@@ -18,13 +18,13 @@
 #include <WebServer.h>
 #include <ElegantOTA.h>
 
-#include <PubSubClient.h>
+// #include <PubSubClient.h>
 
 
 #include "esp32-hal-gpio.h"
 #include "gate.h"
 #include "ledmanager.h"
-// #include "mqttmanager.h"
+#include "mqttmanager.h"
 #include <SPI.h>
 #include <Network.h>
 // #include <Debounce16.h>
@@ -40,7 +40,7 @@ WiFiClient wifiClient;
 NetworkClient* activeClient = nullptr;
 
 // MQTT client - will be configured with activeClient dynamically
-PubSubClient mqttClient;
+// PubSubClient mqttClient;
 
 WebServer server(80);
 
@@ -124,8 +124,8 @@ struct Config {
   char mqttBroker[64] = "broker.hivemq.com";
   int mqttPort = 1883;
   char clientId[32]; // Random client ID generated at startup
-  char statusTopic[64] = "gate/status";
-  char commandTopic[64] = "gate/command";
+  char statusTopic[64] = "gateguardian/status";
+  char commandTopic[64] = "gateguardian/command";
 
   // Timing Settings
   unsigned long gateOperationTime = 20000; // 20 seconds (Requirement 2)
@@ -158,7 +158,7 @@ struct Config {
 Config config;
 Gate *gate = nullptr;
 LEDManager *ledManager = nullptr;
-// MQTTManager *mqttManager = nullptr;
+MQTTManager *mqttManager = nullptr;
 
 // Timer for main loop management
 auto mainTimer = timer_create_default();
@@ -198,36 +198,36 @@ void onButtonRelease() {
     Serial.println("!!!!!!! Button released!");
 }
 
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i=0;i<length;i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-}
+// void mqttCallback(char* topic, byte* payload, unsigned int length) {
+//   Serial.print("Message arrived [");
+//   Serial.print(topic);
+//   Serial.print("] ");
+//   for (int i=0;i<length;i++) {
+//     Serial.print((char)payload[i]);
+//   }
+//   Serial.println();
+// }
 
-void mqttReconnect() {
-  // Loop until we're reconnected
-  while (!mqttClient.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (mqttClient.connect("arduinoClient")) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      mqttClient.publish("outTopic","hello world");
-      // ... and resubscribe
-      mqttClient.subscribe("inTopic");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
-}
+// void mqttReconnect() {
+//   // Loop until we're reconnected
+//   while (!mqttClient.connected()) {
+//     Serial.print("Attempting MQTT connection...");
+//     // Attempt to connect
+//     if (mqttClient.connect("arduinoClient")) {
+//       Serial.println("connected");
+//       // Once connected, publish an announcement...
+//       mqttClient.publish("outTopic","hello world");
+//       // ... and resubscribe
+//       mqttClient.subscribe("inTopic");
+//     } else {
+//       Serial.print("failed, rc=");
+//       Serial.print(mqttClient.state());
+//       Serial.println(" try again in 5 seconds");
+//       // Wait 5 seconds before retrying
+//       delay(5000);
+//     }
+//   }
+// }
 
 // ============================================================================
 // SETUP FUNCTION
@@ -300,8 +300,8 @@ void setup() {
   }
 
 
-  mqttClient.setServer(config.mqttBroker, config.mqttPort);
-  mqttClient.setCallback(mqttCallback);
+  // mqttClient.setServer(config.mqttBroker, config.mqttPort);
+  // mqttClient.setCallback(mqttCallback);
 
 
   // Register network event listener
@@ -344,22 +344,22 @@ void setup() {
   //   Serial.println("MDNS responder started");
   // }
 
-  // // Initialize MQTT Manager (Requirements 7.1, 7.2)
-  // mqttManager = new MQTTManager(config.mqttBroker, config.mqttPort, 
-  //                               config.clientId, config.statusTopic, 
-  //                               config.commandTopic);
-  // if (mqttManager) {
-  //   mqttManager->initialize();
+  // Initialize MQTT Manager (Requirements 7.1, 7.2)
+  mqttManager = new MQTTManager(config.mqttBroker, config.mqttPort, 
+                                config.clientId, config.statusTopic, 
+                                config.commandTopic);
+  if (mqttManager) {
+    mqttManager->initialize(activeClient);
     
-  //   // Set gate controller reference for command handling
-  //   if (gate) {
-  //     mqttManager->setGateController(gate);
-  //   }
+    // Set gate controller reference for command handling
+    if (gate) {
+      mqttManager->setGateController(gate);
+    }
     
-  //   Serial.println("[INIT] MQTT manager initialized");
-  // } else {
-  //   Serial.println("[ERROR] Failed to initialize MQTT manager");
-  // }
+    Serial.println("[INIT] MQTT manager initialized");
+  } else {
+    Serial.println("[ERROR] Failed to initialize MQTT manager");
+  }
 
 
   server.on("/", []() {
@@ -394,7 +394,7 @@ void setup() {
   printConfigSummary();
 
   // Schedule checkConnection to run every 1000ms (1 second)
-  mainTimer.every(1000, checkConnectionCallback);
+  mainTimer.every(5000, checkConnectionCallback);
   Serial.println("[INIT] Connection check scheduled every 1 second");
 
   // Schedule input to run every 1000ms
@@ -485,6 +485,7 @@ int checkConnection() {
   Serial.println("Connecting via Wi-Fi...");
   for (int i = 0; i < 50; i++) {
     if ((WiFi.status() == WL_CONNECTED))
+      Serial.println(" CONNECTED");
       break;
     delay(100);
     Serial.print(".");
@@ -529,18 +530,23 @@ void loop() {
     static unsigned long lastNetworkUpdate = 0;
     if (millis() - lastNetworkUpdate >= 500) {
         lastNetworkUpdate = millis(); 
-        Serial.println("Network loop!");
+        Serial.println("Active Network Loop!");
     }
-
 
     server.handleClient();
     ElegantOTA.loop();
 
-    mqttClient.setClient(*activeClient);
-    if (!mqttClient.connected()) {
-      mqttReconnect();
+    // Update MQTT manager (Requirements 7.1, 7.2, 7.3, 7.4)
+    if (mqttManager) {
+      mqttManager->setClient(activeClient);
+      mqttManager->update();
     }
-    mqttClient.loop();
+
+    // mqttClient.setClient(*activeClient);
+    // if (!mqttClient.connected()) {
+    //   mqttReconnect();
+    // }
+    // mqttClient.loop();
   }
 
   unsigned long loopStart = millis();
@@ -566,11 +572,6 @@ void loop() {
   if (ledManager) {
     ledManager->update();
   }
-
-  // Update MQTT manager (Requirements 7.1, 7.2, 7.3, 7.4)
-  // if (mqttManager) {
-  //   mqttManager->update();
-  // }
 
   // Tick main timer for any scheduled tasks
   mainTimer.tick();
