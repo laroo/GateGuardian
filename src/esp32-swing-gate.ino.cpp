@@ -21,6 +21,7 @@
 
 // #include <PubSubClient.h>
 
+#include "config.h"
 
 #include "esp32-hal-gpio.h"
 #include "gate.h"
@@ -124,11 +125,11 @@ void onNetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
 // ============================================================================
 struct Config {
   // MQTT Settings (Requirement 7)
-  char mqttBroker[64] = "broker.hivemq.com";
-  int mqttPort = 1883;
+  // char mqttBroker[64] = "broker.hivemq.com";
+  // int mqttPort = 1883;
   char clientId[32]; // Random client ID generated at startup
-  char statusTopic[64] = "gateguardian/status";
-  char commandTopic[64] = "gateguardian/command";
+  // char statusTopic[64] = "gateguardian/status";
+  // char commandTopic[64] = "gateguardian/command";
 
   // Timing Settings
   unsigned long gateOperationTime = 20000; // 20 seconds (Requirement 2)
@@ -354,9 +355,9 @@ void setup() {
   // }
 
   // Initialize MQTT Manager (Requirements 7.1, 7.2)
-  mqttManager = new MQTTManager(config.mqttBroker, config.mqttPort, 
-                                config.clientId, config.statusTopic, 
-                                config.commandTopic);
+  mqttManager = new MQTTManager(MQTT_BROKER, MQTT_PORT, 
+                                config.clientId, MQTT_TOPIC_STATUS, 
+                                MQTT_TOPIC_COMMAND);
   if (mqttManager) {
     mqttManager->initialize(activeClient);
     
@@ -706,16 +707,16 @@ void initializeGPIO() {
 // ============================================================================
 void printConfigSummary() {
   Serial.println("[CONFIG] System Configuration:");
-  Serial.print("  MQTT Broker: ");
-  Serial.print(config.mqttBroker);
-  Serial.print(":");
-  Serial.println(config.mqttPort);
-  Serial.print("  Client ID: ");
-  Serial.println(config.clientId);
-  Serial.print("  Status Topic: ");
-  Serial.println(config.statusTopic);
-  Serial.print("  Command Topic: ");
-  Serial.println(config.commandTopic);
+  // Serial.print("  MQTT Broker: ");
+  // Serial.print(config.mqttBroker);
+  // Serial.print(":");
+  // Serial.println(config.mqttPort);
+  // Serial.print("  Client ID: ");
+  // Serial.println(config.clientId);
+  // Serial.print("  Status Topic: ");
+  // Serial.println(config.statusTopic);
+  // Serial.print("  Command Topic: ");
+  // Serial.println(config.commandTopic);
   Serial.print("  Gate Operation Time: ");
   Serial.print(config.gateOperationTime);
   Serial.println("ms");
