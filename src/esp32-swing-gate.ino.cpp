@@ -17,6 +17,7 @@
 // #include <WiFi.h>
 #include <WebServer.h>
 #include <ElegantOTA.h>
+#include "DHTesp.h"
 
 // #include <PubSubClient.h>
 
@@ -46,6 +47,8 @@ WebServer server(80);
 
 // Connection check result (used by network event handler)
 int connectionStatus = 0;
+
+DHTesp dhtSensor;
 
 // ============================================================================
 // NETWORK EVENT HANDLER
@@ -247,6 +250,12 @@ void setup() {
   Serial.print(ESP.getFreeHeap());
   Serial.println(" bytes");
   
+  dhtSensor.setup(config.sensor1Pin, DHTesp::DHT22);
+
+  TempAndHumidity  data = dhtSensor.getTempAndHumidity();
+  Serial.println("Temp:     " + String(data.temperature, 2) + "°C");
+  Serial.println("Humidity: " + String(data.humidity, 1) + "%");
+  
   // Generate random client ID for MQTT
   randomSeed(analogRead(0));
   sprintf(config.clientId, "esp32_gate_%06X", random(0xFFFFFF));
@@ -363,7 +372,7 @@ void setup() {
 
 
   server.on("/", []() {
-    server.send(200, "text/plain", "Hi! This is GateGuardian REUPLOAD1.");
+    server.send(200, "text/plain", "Hi! This is GateGuardian");
   });
   server.on("/gate/close", []() {
     gate->closeGate();
@@ -398,12 +407,12 @@ void setup() {
   Serial.println("[INIT] Connection check scheduled every 1 second");
 
   // Schedule input to run every 1000ms
-  mainTimer.every(1000, checkInputCallback);
+  mainTimer.every(10000, checkInputCallback);
   Serial.println("[INIT] input check scheduled every 1 second");
 
 
   // Schedule connection status reporting every 2000ms (2 seconds)
-  mainTimer.every(2000, reportConnectionStatusCallback);
+  mainTimer.every(5000, reportConnectionStatusCallback);
   Serial.println("[INIT] Connection status reporting scheduled every 2 seconds");
 
   Serial.println("[INIT] System initialization complete");
@@ -426,6 +435,15 @@ bool checkInputCallback(void *) {
 
     // Serial.print("Gatelight debounce: ");
     // Serial.println(gateLightsButton.isPressed());
+
+    TempAndHumidity  data = dhtSensor.getTempAndHumidity();
+
+    if (dhtSensor.getStatus() != 0) {
+      Serial.println("DHT22 error status: " + String(dhtSensor.getStatusString()));
+    } else {
+      Serial.println("Temp:          " + String(data.temperature, 2) + "°C");
+      Serial.println("Humidity:      " + String(data.humidity, 1) + "%");
+    }
 
   return true; // Repeat the timer
 }
@@ -527,11 +545,11 @@ void loop() {
   // Connection status is now reported by timer callback every 2 seconds
   if (activeClient && connectionStatus > 0) {
 
-    static unsigned long lastNetworkUpdate = 0;
-    if (millis() - lastNetworkUpdate >= 500) {
-        lastNetworkUpdate = millis(); 
-        Serial.println("Active Network Loop!");
-    }
+    // static unsigned long lastNetworkUpdate = 0;
+    // if (millis() - lastNetworkUpdate >= 500) {
+    //     lastNetworkUpdate = millis(); 
+    //     Serial.println("Active Network Loop!");
+    // }
 
     server.handleClient();
     ElegantOTA.loop();
@@ -616,8 +634,8 @@ void initializeGPIO() {
   pinMode(config.photoEyePin, INPUT);
 
   // Configure sensor input with internal pull-up
-  pinMode(config.sensor1Pin, INPUT_PULLUP);
-  pinMode(config.sensor2Pin, INPUT_PULLUP);
+  pinMode(config.sensor1Pin, INPUT);
+  pinMode(config.sensor2Pin, INPUT);
   
 }
 

@@ -12,12 +12,12 @@
 // ============================================================================
 // GPIO PIN DEFINITIONS (extern declarations from header)
 // ============================================================================
-const int PIN_LED_GATE_CLOSED = 17;  // Red LED: closed (blink = closing)
-const int PIN_LED_GATE_OPEN = 5;    // Green LED: open (blink = opening)
+// const int PIN_LED_GATE_CLOSED = 17;  // Red LED: closed (blink = closing)
+// const int PIN_LED_GATE_OPEN = 5;    // Green LED: open (blink = opening)
 
 const int PIN_RELAY_GATE_CLOSE = 12;  // Close relay control
 const int PIN_RELAY_GATE_OPEN = 15;   // Open relay control
-const int PIN_RELAY_GATE_STOP = 16;   // Stop relay control
+const int PIN_RELAY_GATE_STOP = 14;   // Stop relay control
 
 const int PIN_SENSOR_GATE_OPEN = 33; // Gate position sensor
 const int PIN_BUTTON = 35;           // Manual control button
@@ -208,13 +208,13 @@ void Gate::stopGate() {
     Serial.println("[BUTTON] Button pressed - Gate command: STOP");
     
     if (!_initialized) {
-        Serial.println("[ERROR] Gate not initialized, ignoring stop command");
+        Serial.println("[ERROR] Gate not initialized, ignoring STOP command");
         return;
     }
     
     // Prevent activation while relay is active
     if (_relayActive) {
-        Serial.println("[GATE] Relay is active, ignoring stop command");
+        Serial.println("[GATE] Relay is active, ignoring STOP command");
         return;
     }
     
@@ -229,7 +229,7 @@ void Gate::openGate() {
     Serial.println("[BUTTON] Button pressed - Gate command: OPEN");
     
     if (!_initialized) {
-        Serial.println("[ERROR] Gate not initialized, ignoring open command");
+        Serial.println("[ERROR] Gate not initialized, ignoring OPEN command");
         return;
     }
     
@@ -241,7 +241,7 @@ void Gate::openGate() {
     
     // Prevent activation while relay is active
     if (_relayActive) {
-        Serial.println("[GATE] Relay is active, ignoring open command");
+        Serial.println("[GATE] Relay is active, ignoring OPEN command");
         return;
     }
     
@@ -256,7 +256,7 @@ void Gate::closeGate() {
     Serial.println("[BUTTON] Button pressed - Gate command: CLOSE");
     
     if (!_initialized) {
-        Serial.println("[ERROR] Gate not initialized, ignoring close command");
+        Serial.println("[ERROR] Gate not initialized, ignoring CLOSE command");
         return;
     }
     
@@ -268,7 +268,7 @@ void Gate::closeGate() {
     
     // Prevent activation while relay is active
     if (_relayActive) {
-        Serial.println("[GATE] Relay is active, ignoring close command");
+        Serial.println("[GATE] Relay is active, ignoring CLOSE command");
         return;
     }
     

@@ -104,10 +104,10 @@ void MQTTManager::initialize(NetworkClient* activeClient) {
 void MQTTManager::update() {
     static unsigned long lastNetworkUpdate = 0;
     bool debug = false;
-    if (millis() - lastNetworkUpdate >= 500) {
-        lastNetworkUpdate = millis(); 
-        debug = true;
-    }
+    // if (millis() - lastNetworkUpdate >= 500) {
+    //     lastNetworkUpdate = millis(); 
+    //     debug = true;
+    // }
 
     
     if (!_initialized) {
@@ -371,6 +371,9 @@ void MQTTManager::_handleCommand(const String& command) {
     } else if (upperCommand == "CLOSE") {
         Serial.println("[MQTT] Executing CLOSE command");
         _gateController->closeGate();
+    } else if (upperCommand == "STOP") {
+        Serial.println("[MQTT] Executing STOP command");
+        _gateController->stopGate();
     } else if (upperCommand == "TOGGLE") {
         Serial.println("[MQTT] Executing TOGGLE command");
         _gateController->toggle();
