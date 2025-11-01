@@ -32,9 +32,12 @@ public:
      * @param clientId Unique client identifier
      * @param statusTopic Topic for publishing gate status
      * @param commandTopic Topic for subscribing to gate commands
+     * @param username MQTT username (optional, pass nullptr if not needed)
+     * @param password MQTT password (optional, pass nullptr if not needed)
      */
     MQTTManager(const char* broker, int port, const char* clientId, 
-                const char* statusTopic, const char* commandTopic);
+                const char* statusTopic, const char* commandTopic,
+                const char* username = nullptr, const char* password = nullptr);
     
     /**
      * Destructor - Clean up resources
@@ -93,6 +96,9 @@ private:
     char _clientId[32];         // Unique client ID
     char _statusTopic[64];      // Status publishing topic
     char _commandTopic[64];     // Command subscription topic
+    char _username[64];         // MQTT username (empty if not used)
+    char _password[64];         // MQTT password (empty if not used)
+    bool _useAuth;              // Flag indicating if authentication is enabled
     
     // Network and MQTT clients
     NetworkClient* _ethClient;    // WiFi client for network connection

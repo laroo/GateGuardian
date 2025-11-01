@@ -357,7 +357,7 @@ void setup() {
   // Initialize MQTT Manager (Requirements 7.1, 7.2)
   mqttManager = new MQTTManager(MQTT_BROKER, MQTT_PORT, 
                                 config.clientId, MQTT_TOPIC_STATUS, 
-                                MQTT_TOPIC_COMMAND);
+                                MQTT_TOPIC_COMMAND, MQTT_USERNAME, MQTT_PASSWORD);
   if (mqttManager) {
     mqttManager->initialize(activeClient);
     

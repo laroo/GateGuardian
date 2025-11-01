@@ -17,11 +17,12 @@ MQTTManager* MQTTManager::_instance = nullptr;
 // ============================================================================
 
 MQTTManager::MQTTManager(const char* broker, int port, const char* clientId,
-                         const char* statusTopic, const char* commandTopic)
+                         const char* statusTopic, const char* commandTopic,
+                         const char* username, const char* password)
     : _port(port), _ethClient(nullptr), _mqttClient(nullptr),
       _initialized(false), _wifiConnected(false), _autoPublishEnabled(true),
       _lastPublish(0), _lastConnectionAttempt(0), _reconnectAttempts(0),
-      _gateController(nullptr) {
+      _gateController(nullptr), _useAuth(false) {
     
     // Copy configuration strings
     strncpy(_broker, broker, sizeof(_broker) - 1);
@@ -35,6 +36,22 @@ MQTTManager::MQTTManager(const char* broker, int port, const char* clientId,
     
     strncpy(_commandTopic, commandTopic, sizeof(_commandTopic) - 1);
     _commandTopic[sizeof(_commandTopic) - 1] = '\0';
+    
+    // Copy authentication credentials if provided
+    if (username != nullptr && password != nullptr) {
+        strncpy(_username, username, sizeof(_username) - 1);
+        _username[sizeof(_username) - 1] = '\0';
+        
+        strncpy(_password, password, sizeof(_password) - 1);
+        _password[sizeof(_password) - 1] = '\0';
+        
+        _useAuth = true;
+        Serial.println("[MQTT] Authentication enabled");
+    } else {
+        _username[0] = '\0';
+        _password[0] = '\0';
+        Serial.println("[MQTT] Authentication disabled");
+    }
     
     // Set static instance for callback handling
     _instance = this;
@@ -164,8 +181,15 @@ bool MQTTManager::connect() {
     Serial.print(":");
     Serial.println(_port);
     
-    // Attempt MQTT connection
-    bool connected = _mqttClient->connect(_clientId);
+    // Attempt MQTT connection with or without authentication
+    bool connected;
+    if (_useAuth) {
+        Serial.println("[MQTT] Connecting with authentication...");
+        connected = _mqttClient->connect(_clientId, _username, _password);
+    } else {
+        Serial.println("[MQTT] Connecting without authentication...");
+        connected = _mqttClient->connect(_clientId);
+    }
     
     if (connected) {
         Serial.println("[MQTT] Connected to broker successfully");

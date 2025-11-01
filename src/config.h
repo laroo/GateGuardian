@@ -18,10 +18,10 @@
 
 
 #ifndef MQTT_USERNAME
-#define MQTT_USERNAME "dummy"
+#define MQTT_USERNAME nullptr
 #endif
 #ifndef MQTT_PASSWORD
-#define MQTT_PASSWORD "dummy"
+#define MQTT_PASSWORD nullptr
 #endif
 
 // MQTT topic prefix
