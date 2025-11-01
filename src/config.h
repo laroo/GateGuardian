@@ -16,6 +16,14 @@
 #define MQTT_PORT 1883
 #endif
 
+
+#ifndef MQTT_USERNAME
+#define MQTT_USERNAME "dummy"
+#endif
+#ifndef MQTT_PASSWORD
+#define MQTT_PASSWORD "dummy"
+#endif
+
 // MQTT topic prefix
 #ifndef MQTT_TOPIC_STATUS
 #define MQTT_TOPIC_STATUS "gateguardian/status3"
