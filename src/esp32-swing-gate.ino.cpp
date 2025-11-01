@@ -17,7 +17,9 @@
 // #include <WiFi.h>
 #include <WebServer.h>
 #include <ElegantOTA.h>
-#include "DHTesp.h"
+#include "DHT.h"
+// #include "RemoteDebug.h"
+
 
 // #include <PubSubClient.h>
 
@@ -49,7 +51,15 @@ WebServer server(80);
 // Connection check result (used by network event handler)
 int connectionStatus = 0;
 
-DHTesp dhtSensor;
+// DHTesp dhtSensor;
+// config.sensor1Pin, DHTesp::DHT22
+
+// #define DHTPIN 4
+// #define DHTTYPE DHT22
+// DHT dhtSensor(DHTPIN, DHTTYPE);
+
+// RemoteDebug Debug;
+
 
 // ============================================================================
 // NETWORK EVENT HANDLER
@@ -251,17 +261,23 @@ void setup() {
   Serial.print(ESP.getFreeHeap());
   Serial.println(" bytes");
   
-  dhtSensor.setup(config.sensor1Pin, DHTesp::DHT22);
+  // dhtSensor.begin();
+  // float temperature = dhtSensor.readTemperature();
+  // float humidity = dhtSensor.readHumidity();
+  // Serial.println("Temp:     " + String(temperature, 2) + "°C");
+  // Serial.println("Humidity: " + String(humidity, 1) + "%");
 
-  TempAndHumidity  data = dhtSensor.getTempAndHumidity();
-  Serial.println("Temp:     " + String(data.temperature, 2) + "°C");
-  Serial.println("Humidity: " + String(data.humidity, 1) + "%");
-  
   // Generate random client ID for MQTT
   randomSeed(analogRead(0));
   sprintf(config.clientId, "esp32_gate_%06X", random(0xFFFFFF));
   Serial.print("[INIT] MQTT Client ID: ");
   Serial.println(config.clientId);
+
+  // Debug.begin(config.clientId);    // Initialize the WiFi server
+  // Debug.setResetCmdEnabled(true);  // Enable the reset command
+  // Debug.showProfiler(false);        // Profiler (Good to measure times, to optimize codes)
+  // Debug.showColors(true);          // Colors
+  // Serial.println("[RemoteDebug] Initialized");
 
 
   // gateLightsButton.onPress(onButtonPress);
@@ -437,14 +453,15 @@ bool checkInputCallback(void *) {
     // Serial.print("Gatelight debounce: ");
     // Serial.println(gateLightsButton.isPressed());
 
-    TempAndHumidity  data = dhtSensor.getTempAndHumidity();
+    // float temperature = dhtSensor.readTemperature();
+    // float humidity = dhtSensor.readHumidity();
+    // if (isnan(temperature) || isnan(humidity)) {
+    //   Serial.println("Failed to read from DHT sensor!");
+    // } else {
+    //   Serial.println("Temp:     " + String(temperature, 2) + "°C");
+    //   Serial.println("Humidity: " + String(humidity, 1) + "%");
+    // }
 
-    if (dhtSensor.getStatus() != 0) {
-      Serial.println("DHT22 error status: " + String(dhtSensor.getStatusString()));
-    } else {
-      Serial.println("Temp:          " + String(data.temperature, 2) + "°C");
-      Serial.println("Humidity:      " + String(data.humidity, 1) + "%");
-    }
 
   return true; // Repeat the timer
 }
@@ -560,6 +577,7 @@ void loop() {
       mqttManager->setClient(activeClient);
       mqttManager->update();
     }
+    // Debug.handle();
 
     // mqttClient.setClient(*activeClient);
     // if (!mqttClient.connected()) {
