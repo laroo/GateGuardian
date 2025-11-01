@@ -239,22 +239,28 @@ bool MQTTManager::publishStatus(const String& status) {
         return false;
     }
     
-    // Create status message
-    String message;
+    bool statePublished = false;
+    bool clientIdPublished = false;
+    bool uptimePublished = false;
+
     if (_gateController) {
-        message = _formatStatusMessage(_gateController->getState());
+        statePublished = _mqttClient->publish("gateguardian/state", _gateController->getStateString().c_str());
     } else {
-        message = status; // Use provided status if no gate controller
+        statePublished = _mqttClient->publish("gateguardian/state", "MISSING");
     }
-    
-    // Publish message
-    bool success = _mqttClient->publish(_statusTopic, message.c_str());
-    
-    if (success) {
+    clientIdPublished = _mqttClient->publish("gateguardian/client_id", _clientId);
+    uptimePublished = _mqttClient->publish("gateguardian/uptime", String(millis() / 1000).c_str());
+
+    bool success = false;
+    if (statePublished && clientIdPublished && uptimePublished) {
+        Serial.println("Published MQTT message(s)");
         _lastPublish = millis();
+        success = true;
+    } else {
+        Serial.println("Failed to publish MQTT message(s)");
+        success = false;
     }
     
-    _logPublishEvent(message, success);
     return success;
 }
 
@@ -407,19 +413,6 @@ void MQTTManager::_handleCommand(const String& command) {
     }
 }
 
-String MQTTManager::_formatStatusMessage(GateState state) {
-    // Create JSON-formatted status message as per design document
-    String message = "{";
-    message += "\"device_id\":\"" + String(_clientId) + "\",";
-    message += "\"timestamp\":" + String(millis() / 1000) + ",";
-    message += "\"state\":\"" + String(_gateController ? _gateController->getStateString() : "UNKNOWN") + "\",";
-    message += "\"sensor_raw\":" + String(_gateController ? "true" : "false") + ",";
-    message += "\"uptime\":" + String(millis() / 1000);
-    message += "}";
-    
-    return message;
-}
-
 void MQTTManager::_logConnectionStatus() {
     Serial.println("[MQTT] Connection status:");
     Serial.print("  WiFi: ");
@@ -432,15 +425,6 @@ void MQTTManager::_logConnectionStatus() {
     Serial.println(_port);
 }
 
-void MQTTManager::_logPublishEvent(const String& message, bool success) {
-    if (success) {
-        Serial.print("[MQTT] Status published: ");
-        Serial.println(message);
-    } else {
-        Serial.print("[ERROR] Failed to publish status: ");
-        Serial.println(message);
-    }
-}
 
 void MQTTManager::_logCommandReceived(const String& command) {
     Serial.print("[MQTT] Command received: ");

@@ -134,9 +134,6 @@ void onNetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
 // CONFIGURATION STRUCTURE
 // ============================================================================
 struct Config {
-  // MQTT Settings (Requirement 7)
-  // char mqttBroker[64] = "broker.hivemq.com";
-  // int mqttPort = 1883;
   char clientId[32]; // Random client ID generated at startup
   // char statusTopic[64] = "gateguardian/status";
   // char commandTopic[64] = "gateguardian/command";

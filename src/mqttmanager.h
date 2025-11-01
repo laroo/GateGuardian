@@ -126,9 +126,7 @@ private:
     bool _publishTimerCallback(void* argument);
     bool _reconnectTimerCallback(void* argument);
     void _handleCommand(const String& command);
-    String _formatStatusMessage(GateState state);
     void _logConnectionStatus();
-    void _logPublishEvent(const String& message, bool success);
     void _logCommandReceived(const String& command);
     
     // Static instance pointer for callback handling

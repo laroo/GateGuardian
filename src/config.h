@@ -10,7 +10,7 @@
 
 // MQTT broker
 #ifndef MQTT_BROKER
-#define MQTT_BROKER "broker.hivemq.com"
+#define MQTT_BROKER "test.mosquitto.org"
 #endif
 #ifndef MQTT_PORT
 #define MQTT_PORT 1883
@@ -26,8 +26,8 @@
 
 // MQTT topic prefix
 #ifndef MQTT_TOPIC_STATUS
-#define MQTT_TOPIC_STATUS "gateguardian/status3"
+#define MQTT_TOPIC_STATUS "gateguardian/status"
 #endif
 #ifndef MQTT_TOPIC_COMMAND
-#define MQTT_TOPIC_COMMAND "gateguardian/command3"
+#define MQTT_TOPIC_COMMAND "gateguardian/command"
 #endif
