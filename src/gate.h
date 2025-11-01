@@ -23,8 +23,11 @@ extern const int PIN_RELAY_GATE_CLOSE; // Close relay control
 extern const int PIN_RELAY_GATE_OPEN;  // Open relay control
 extern const int PIN_RELAY_GATE_STOP;  // Stop relay control
 
-// Sensor Input
+// Sensor Inputs
 extern const int PIN_SENSOR_GATE_LOCK;  // High when gate is closed; Low when gate is: open, opening or closing
+extern const int PIN_SENSOR_GATE_LIGHTS;  // Gate lights sensor
+extern const int PIN_SENSOR_PHOTO_EYE;    // Photo eye sensor
+extern const int PIN_SENSOR_EXTERNAL_RELAY; // External relay sensor
 
 
 // ============================================================================
@@ -114,10 +117,28 @@ public:
     String getStateString() const;
 
     /**
-     * Get current sensor state
+     * Get current gate lock sensor state
      * @return true if sensor is HIGH (gate is closed), false otherwise
      */
     bool getSensorLockGate() const;
+
+    /**
+     * Get current gate lights sensor state
+     * @return true if sensor is HIGH, false otherwise
+     */
+    bool getSensorGateLights() const;
+
+    /**
+     * Get current photo eye sensor state
+     * @return true if sensor is HIGH, false otherwise
+     */
+    bool getSensorPhotoEye() const;
+
+    /**
+     * Get current external relay sensor state
+     * @return true if sensor is HIGH, false otherwise
+     */
+    bool getSensorExternalRelay() const;
 
 private:
     // Timer management
@@ -127,12 +148,21 @@ private:
     // State tracking
     GateState _currentState;    // Current gate state
     GateState _previousState;   // Previous state for change detection
-    bool _sensorLockGate;          // Current sensor reading
-    bool _previousSensorLockGate;  // Previous sensor reading for debouncing
+    bool _sensorLockGate;          // Current lock sensor reading
+    bool _previousSensorLockGate;  // Previous lock sensor reading for debouncing
+    bool _sensorGateLights;        // Current gate lights sensor reading
+    bool _previousSensorGateLights; // Previous gate lights sensor reading for debouncing
+    bool _sensorPhotoEye;          // Current photo eye sensor reading
+    bool _previousSensorPhotoEye;  // Previous photo eye sensor reading for debouncing
+    bool _sensorExternalRelay;     // Current external relay sensor reading
+    bool _previousSensorExternalRelay; // Previous external relay sensor reading for debouncing
     
     // Timing variables
     unsigned long _lastStateChange;     // Timestamp of last state change
-    unsigned long _lastSensorRead;      // Timestamp of last sensor reading
+    unsigned long _lastSensorReadLock;      // Timestamp of last lock sensor reading
+    unsigned long _lastSensorReadLights;    // Timestamp of last lights sensor reading
+    unsigned long _lastSensorReadPhotoEye;  // Timestamp of last photo eye sensor reading
+    unsigned long _lastSensorReadExtRelay;  // Timestamp of last external relay sensor reading
     unsigned long _relayActivationTime; // Timestamp when relay was activated
     
     // Control flags
@@ -141,7 +171,10 @@ private:
     
     // Private methods
     void _updateGateState(GateState newState);
-    bool _readSensor();
+    bool _readSensorLock();
+    bool _readSensorLights();
+    bool _readSensorPhotoEye();
+    bool _readSensorExternalRelay();
     void _activateRelay(int relayPin, const char* relayName);
     void _deactivateRelays();
     void _logStateChange(GateState oldState, GateState newState);

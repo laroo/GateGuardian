@@ -19,10 +19,10 @@ const int PIN_RELAY_GATE_CLOSE = 12;  // Close relay control
 const int PIN_RELAY_GATE_OPEN = 15;   // Open relay control
 const int PIN_RELAY_GATE_STOP = 14;   // Stop relay control
 
-const int PIN_SENSOR_GATE_LOCK = 32; // Gate position sensor
-const int PIN_SENSOR_GATE_LIGHTS = 33;
-const int PIN_SENSOR_PHOTO_EYE = 36;
-const int PIN_SENSOR_EXTERNAL_RELAY = 35;
+const int PIN_SENSOR_GATE_LOCK = 32;      // Gate position sensor
+const int PIN_SENSOR_GATE_LIGHTS = 33;    // Gate lights sensor
+const int PIN_SENSOR_PHOTO_EYE = 36;      // Photo eye sensor (input only)
+const int PIN_SENSOR_EXTERNAL_RELAY = 35; // External relay sensor (input only)
 
 
 // ============================================================================
@@ -34,8 +34,17 @@ Gate::Gate() :
     _previousState(GATE_UNKNOWN),
     _sensorLockGate(false),
     _previousSensorLockGate(false),
+    _sensorGateLights(false),
+    _previousSensorGateLights(false),
+    _sensorPhotoEye(false),
+    _previousSensorPhotoEye(false),
+    _sensorExternalRelay(false),
+    _previousSensorExternalRelay(false),
     _lastStateChange(0),
-    _lastSensorRead(0),
+    _lastSensorReadLock(0),
+    _lastSensorReadLights(0),
+    _lastSensorReadPhotoEye(0),
+    _lastSensorReadExtRelay(0),
     _relayActivationTime(0),
     _relayActive(false),
     _initialized(false)
@@ -51,13 +60,26 @@ void Gate::initialize() {
     Serial.println("[GATE] Initializing gate controller...");
     
     // Note: GPIO pins are already configured in main setup()
-    // Read initial sensor state and determine boot-up state
-    _sensorLockGate = _readSensor();
+    // Read initial sensor states
+    _sensorLockGate = _readSensorLock();
     _previousSensorLockGate = _sensorLockGate;
+    
+    _sensorGateLights = _readSensorLights();
+    _previousSensorGateLights = _sensorGateLights;
+    
+    _sensorPhotoEye = _readSensorPhotoEye();
+    _previousSensorPhotoEye = _sensorPhotoEye;
+    
+    _sensorExternalRelay = _readSensorExternalRelay();
+    _previousSensorExternalRelay = _sensorExternalRelay;
     
     _initialized = true;
     _lastStateChange = millis();
-    _lastSensorRead = millis();
+    unsigned long currentTime = millis();
+    _lastSensorReadLock = currentTime;
+    _lastSensorReadLights = currentTime;
+    _lastSensorReadPhotoEye = currentTime;
+    _lastSensorReadExtRelay = currentTime;
     
     // Handle boot-up state detection
     _handleBootupState();
@@ -72,17 +94,58 @@ void Gate::update() {
     _stateTimer.tick();
     _relayTimer.tick();
     
-    // Read sensor state with debouncing
+    // Read sensor states with debouncing
     unsigned long currentTime = millis();
-    if (currentTime - _lastSensorRead >= 50) { // 50ms debounce
-        bool newSensorState = _readSensor();
+    
+    // Lock sensor debouncing (50ms)
+    if (currentTime - _lastSensorReadLock >= 50) {
+        bool newSensorState = _readSensorLock();
         if (newSensorState != _previousSensorLockGate) {
             _sensorLockGate = newSensorState;
             _previousSensorLockGate = newSensorState;
-            _lastSensorRead = currentTime;
+            _lastSensorReadLock = currentTime;
             
-            Serial.print("[SENSOR] Sensor state changed to: ");
+            Serial.print("[SENSOR] Lock sensor changed to: ");
             Serial.println(_sensorLockGate ? "HIGH (closed)" : "LOW (open/moving)");
+        }
+    }
+    
+    // Gate lights sensor debouncing (50ms)
+    if (currentTime - _lastSensorReadLights >= 50) {
+        bool newSensorState = _readSensorLights();
+        if (newSensorState != _previousSensorGateLights) {
+            _sensorGateLights = newSensorState;
+            _previousSensorGateLights = newSensorState;
+            _lastSensorReadLights = currentTime;
+            
+            Serial.print("[SENSOR] Gate lights sensor changed to: ");
+            Serial.println(_sensorGateLights ? "HIGH" : "LOW");
+        }
+    }
+    
+    // Photo eye sensor debouncing (50ms)
+    if (currentTime - _lastSensorReadPhotoEye >= 50) {
+        bool newSensorState = _readSensorPhotoEye();
+        if (newSensorState != _previousSensorPhotoEye) {
+            _sensorPhotoEye = newSensorState;
+            _previousSensorPhotoEye = newSensorState;
+            _lastSensorReadPhotoEye = currentTime;
+            
+            Serial.print("[SENSOR] Photo eye sensor changed to: ");
+            Serial.println(_sensorPhotoEye ? "HIGH" : "LOW");
+        }
+    }
+    
+    // External relay sensor debouncing (50ms)
+    if (currentTime - _lastSensorReadExtRelay >= 50) {
+        bool newSensorState = _readSensorExternalRelay();
+        if (newSensorState != _previousSensorExternalRelay) {
+            _sensorExternalRelay = newSensorState;
+            _previousSensorExternalRelay = newSensorState;
+            _lastSensorReadExtRelay = currentTime;
+            
+            Serial.print("[SENSOR] External relay sensor changed to: ");
+            Serial.println(_sensorExternalRelay ? "HIGH" : "LOW");
         }
     }
     
@@ -309,6 +372,18 @@ bool Gate::getSensorLockGate() const {
     return _sensorLockGate;
 }
 
+bool Gate::getSensorGateLights() const {
+    return _sensorGateLights;
+}
+
+bool Gate::getSensorPhotoEye() const {
+    return _sensorPhotoEye;
+}
+
+bool Gate::getSensorExternalRelay() const {
+    return _sensorExternalRelay;
+}
+
 
 // ============================================================================
 // PRIVATE METHODS (Stubs for future implementation)
@@ -338,9 +413,24 @@ void Gate::_updateGateState(GateState newState) {
     }
 }
 
-bool Gate::_readSensor() {
-    // Read sensor state - HIGH when gate is closed, LOW when open/moving
+bool Gate::_readSensorLock() {
+    // Read lock sensor state - HIGH when gate is closed, LOW when open/moving
     return digitalRead(PIN_SENSOR_GATE_LOCK);
+}
+
+bool Gate::_readSensorLights() {
+    // Read gate lights sensor state
+    return digitalRead(PIN_SENSOR_GATE_LIGHTS);
+}
+
+bool Gate::_readSensorPhotoEye() {
+    // Read photo eye sensor state
+    return digitalRead(PIN_SENSOR_PHOTO_EYE);
+}
+
+bool Gate::_readSensorExternalRelay() {
+    // Read external relay sensor state
+    return digitalRead(PIN_SENSOR_EXTERNAL_RELAY);
 }
 
 void Gate::_activateRelay(int relayPin, const char* relayName) {
