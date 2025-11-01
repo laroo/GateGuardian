@@ -240,11 +240,13 @@ bool MQTTManager::publishStatus(const String& status) {
     }
     
     bool statePublished = false;
+    bool sensorPublished = false;
     bool clientIdPublished = false;
     bool uptimePublished = false;
 
     if (_gateController) {
         statePublished = _mqttClient->publish("gateguardian/state", _gateController->getStateString().c_str());
+        sensorPublished = _mqttClient->publish("gateguardian/sensor", _gateController->getSensorState() ? "1" : "0");
     } else {
         statePublished = _mqttClient->publish("gateguardian/state", "MISSING");
     }
@@ -252,7 +254,7 @@ bool MQTTManager::publishStatus(const String& status) {
     uptimePublished = _mqttClient->publish("gateguardian/uptime", String(millis() / 1000).c_str());
 
     bool success = false;
-    if (statePublished && clientIdPublished && uptimePublished) {
+    if (statePublished && sensorPublished && clientIdPublished && uptimePublished) {
         Serial.println("Published MQTT message(s)");
         _lastPublish = millis();
         success = true;

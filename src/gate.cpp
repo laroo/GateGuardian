@@ -19,7 +19,7 @@ const int PIN_RELAY_GATE_CLOSE = 12;  // Close relay control
 const int PIN_RELAY_GATE_OPEN = 15;   // Open relay control
 const int PIN_RELAY_GATE_STOP = 14;   // Stop relay control
 
-const int PIN_SENSOR_GATE_OPEN = 33; // Gate position sensor
+const int PIN_SENSOR_GATE_OPEN = 32; // Gate position sensor
 const int PIN_BUTTON = 35;           // Manual control button
 
 // ============================================================================
@@ -71,17 +71,17 @@ void Gate::update() {
     
     // Read sensor state with debouncing
     unsigned long currentTime = millis();
-    // if (currentTime - _lastSensorRead >= 50) { // 50ms debounce
-    //     bool newSensorState = _readSensor();
-    //     if (newSensorState != _previousSensorState) {
-    //         _sensorState = newSensorState;
-    //         _previousSensorState = newSensorState;
-    //         _lastSensorRead = currentTime;
+    if (currentTime - _lastSensorRead >= 50) { // 50ms debounce
+        bool newSensorState = _readSensor();
+        if (newSensorState != _previousSensorState) {
+            _sensorState = newSensorState;
+            _previousSensorState = newSensorState;
+            _lastSensorRead = currentTime;
             
-    //         Serial.print("[SENSOR] Sensor state changed to: ");
-    //         Serial.println(_sensorState ? "HIGH (closed)" : "LOW (open/moving)");
-    //     }
-    // }
+            Serial.print("[SENSOR] Sensor state changed to: ");
+            Serial.println(_sensorState ? "HIGH (closed)" : "LOW (open/moving)");
+        }
+    }
     
     // Safety check: ensure relay is deactivated after 500ms even if timer fails
     if (_relayActive && (currentTime - _relayActivationTime >= 500)) {
@@ -301,6 +301,11 @@ String Gate::getStateString() const {
         default:            return "INVALID";
     }
 }
+
+bool Gate::getSensorState() const {
+    return _sensorState;
+}
+
 
 // ============================================================================
 // PRIVATE METHODS (Stubs for future implementation)

@@ -115,6 +115,12 @@ public:
      */
     String getStateString() const;
 
+    /**
+     * Get current sensor state
+     * @return true if sensor is HIGH (gate is closed), false otherwise
+     */
+    bool getSensorState() const;
+
 private:
     // Timer management
     Timer<> _stateTimer;        // Timer for gate operation timing
