@@ -198,7 +198,7 @@ void printConfigSummary();
 int checkConnection();
 bool checkConnectionCallback(void *);
 bool reportConnectionStatusCallback(void *);
-bool checkInputCallback(void *);
+// bool checkInputCallback(void *);
 NetworkClient* getActiveClient();
 
 void onButtonPress() {
@@ -421,8 +421,8 @@ void setup() {
   Serial.println("[INIT] Connection check scheduled every 1 second");
 
   // Schedule input to run every 1000ms
-  mainTimer.every(10000, checkInputCallback);
-  Serial.println("[INIT] input check scheduled every 1 second");
+  // mainTimer.every(10000, checkInputCallback);
+  // Serial.println("[INIT] input check scheduled every 1 second");
 
 
   // Schedule connection status reporting every 2000ms (2 seconds)
@@ -432,37 +432,6 @@ void setup() {
   Serial.println("[INIT] System initialization complete");
   Serial.println("======================================");
 }
-
-
-bool checkInputCallback(void *) {
-    Serial.print("Gatelight:     ");
-    Serial.println(digitalRead(config.gateLightsPin));
-
-    Serial.print("GateLock:      ");
-    Serial.println(digitalRead(config.gateLockPin));
-
-    Serial.print("ExternalRelay: ");
-    Serial.println(digitalRead(config.externalRelayPin));
-
-    Serial.print("PhotoEye:      ");
-    Serial.println(digitalRead(config.photoEyePin));
-
-    // Serial.print("Gatelight debounce: ");
-    // Serial.println(gateLightsButton.isPressed());
-
-    // float temperature = dhtSensor.readTemperature();
-    // float humidity = dhtSensor.readHumidity();
-    // if (isnan(temperature) || isnan(humidity)) {
-    //   Serial.println("Failed to read from DHT sensor!");
-    // } else {
-    //   Serial.println("Temp:     " + String(temperature, 2) + "°C");
-    //   Serial.println("Humidity: " + String(humidity, 1) + "%");
-    // }
-
-
-  return true; // Repeat the timer
-}
-
 
 // Timer callback for connection checking
 bool checkConnectionCallback(void *) {

@@ -140,9 +140,15 @@ public:
      */
     bool getSensorExternalRelay() const;
 
+    /**
+     * Set callback function to be called when sensors change
+     * @param callback Function pointer to call on sensor change
+     */
+    void setSensorChangeCallback(void (*callback)());
+
 private:
     // Timer management
-    Timer<> _stateTimer;        // Timer for gate operation timing
+    // Timer<> _stateTimer;        // Timer for gate operation timing
     Timer<> _relayTimer;        // Timer for relay pulse control
     
     // State tracking
@@ -164,10 +170,14 @@ private:
     unsigned long _lastSensorReadPhotoEye;  // Timestamp of last photo eye sensor reading
     unsigned long _lastSensorReadExtRelay;  // Timestamp of last external relay sensor reading
     unsigned long _relayActivationTime; // Timestamp when relay was activated
+    unsigned long _lastSensorChangeNotify;  // Timestamp of last sensor change notification
     
     // Control flags
     bool _relayActive;          // Flag indicating relay is currently active
     bool _initialized;          // Flag indicating initialization complete
+    
+    // Callback function
+    void (*_sensorChangeCallback)();    // Callback for sensor changes
     
     // Private methods
     void _updateGateState(GateState newState);

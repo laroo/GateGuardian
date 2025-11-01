@@ -128,6 +128,7 @@ private:
     void _handleCommand(const String& command);
     void _logConnectionStatus();
     void _logCommandReceived(const String& command);
+    static void _sensorChangeCallback();
     
     // Static instance pointer for callback handling
     static MQTTManager* _instance;

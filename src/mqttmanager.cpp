@@ -240,13 +240,15 @@ bool MQTTManager::publishStatus(const String& status) {
     }
     
     bool statePublished = false;
-    bool sensorPublished = false;
     bool clientIdPublished = false;
     bool uptimePublished = false;
 
     if (_gateController) {
         statePublished = _mqttClient->publish("gateguardian/state", _gateController->getStateString().c_str());
-        sensorPublished = _mqttClient->publish("gateguardian/sensor", _gateController->getSensorLockGate() ? "1" : "0");
+        _mqttClient->publish("gateguardian/sensor/lock", _gateController->getSensorLockGate() ? "1" : "0");
+        _mqttClient->publish("gateguardian/sensor/lights", _gateController->getSensorGateLights() ? "1" : "0");
+        _mqttClient->publish("gateguardian/sensor/photo_eye", _gateController->getSensorPhotoEye() ? "1" : "0");
+        _mqttClient->publish("gateguardian/sensor/external_relay", _gateController->getSensorExternalRelay() ? "1" : "0");
     } else {
         statePublished = _mqttClient->publish("gateguardian/state", "MISSING");
     }
@@ -254,7 +256,7 @@ bool MQTTManager::publishStatus(const String& status) {
     uptimePublished = _mqttClient->publish("gateguardian/uptime", String(millis() / 1000).c_str());
 
     bool success = false;
-    if (statePublished && sensorPublished && clientIdPublished && uptimePublished) {
+    if (statePublished && clientIdPublished && uptimePublished) {
         Serial.println("Published MQTT message(s)");
         _lastPublish = millis();
         success = true;
@@ -278,6 +280,12 @@ void MQTTManager::setClient(NetworkClient* client) {
 void MQTTManager::setGateController(Gate* gate) {
     _gateController = gate;
     Serial.println("[MQTT] Gate controller reference set");
+    
+    // Register sensor change callback
+    if (_gateController) {
+        _gateController->setSensorChangeCallback(_sensorChangeCallback);
+        Serial.println("[MQTT] Sensor change callback registered with gate");
+    }
 }
 
 void MQTTManager::setAutoPublish(bool enabled) {
@@ -431,4 +439,11 @@ void MQTTManager::_logConnectionStatus() {
 void MQTTManager::_logCommandReceived(const String& command) {
     Serial.print("[MQTT] Command received: ");
     Serial.println(command);
+}
+
+void MQTTManager::_sensorChangeCallback() {
+    if (_instance && _instance->_gateController) {
+        Serial.println("[MQTT] Sensor change detected, publishing status...");
+        _instance->publishStatus("");
+    }
 }
