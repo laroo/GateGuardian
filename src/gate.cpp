@@ -19,8 +19,11 @@ const int PIN_RELAY_GATE_CLOSE = 12;  // Close relay control
 const int PIN_RELAY_GATE_OPEN = 15;   // Open relay control
 const int PIN_RELAY_GATE_STOP = 14;   // Stop relay control
 
-const int PIN_SENSOR_GATE_OPEN = 32; // Gate position sensor
-const int PIN_BUTTON = 35;           // Manual control button
+const int PIN_SENSOR_GATE_LOCK = 32; // Gate position sensor
+const int PIN_SENSOR_GATE_LIGHTS = 33;
+const int PIN_SENSOR_PHOTO_EYE = 36;
+const int PIN_SENSOR_EXTERNAL_RELAY = 35;
+
 
 // ============================================================================
 // GATE CLASS IMPLEMENTATION
@@ -29,8 +32,8 @@ const int PIN_BUTTON = 35;           // Manual control button
 Gate::Gate() : 
     _currentState(GATE_UNKNOWN),
     _previousState(GATE_UNKNOWN),
-    _sensorState(false),
-    _previousSensorState(false),
+    _sensorLockGate(false),
+    _previousSensorLockGate(false),
     _lastStateChange(0),
     _lastSensorRead(0),
     _relayActivationTime(0),
@@ -49,8 +52,8 @@ void Gate::initialize() {
     
     // Note: GPIO pins are already configured in main setup()
     // Read initial sensor state and determine boot-up state
-    _sensorState = _readSensor();
-    _previousSensorState = _sensorState;
+    _sensorLockGate = _readSensor();
+    _previousSensorLockGate = _sensorLockGate;
     
     _initialized = true;
     _lastStateChange = millis();
@@ -73,13 +76,13 @@ void Gate::update() {
     unsigned long currentTime = millis();
     if (currentTime - _lastSensorRead >= 50) { // 50ms debounce
         bool newSensorState = _readSensor();
-        if (newSensorState != _previousSensorState) {
-            _sensorState = newSensorState;
-            _previousSensorState = newSensorState;
+        if (newSensorState != _previousSensorLockGate) {
+            _sensorLockGate = newSensorState;
+            _previousSensorLockGate = newSensorState;
             _lastSensorRead = currentTime;
             
             Serial.print("[SENSOR] Sensor state changed to: ");
-            Serial.println(_sensorState ? "HIGH (closed)" : "LOW (open/moving)");
+            Serial.println(_sensorLockGate ? "HIGH (closed)" : "LOW (open/moving)");
         }
     }
     
@@ -93,14 +96,14 @@ void Gate::update() {
     switch (_currentState) {
         case GATE_UNKNOWN:
             // Determine initial state based on sensor
-            if (_sensorState) {
+            if (_sensorLockGate) {
                 // Sensor HIGH - gate is closed (instant detection)
                 _updateGateState(GATE_CLOSED);
             } else {
                 // Sensor is LOW - could be open, opening, or closing
                 // Wait for 20 seconds to determine stable state
                 if (currentTime - _lastStateChange >= 20000) {
-                    if (_sensorState) {
+                    if (_sensorLockGate) {
                         // Sensor HIGH after 20s - gate is closed (instant)
                         _updateGateState(GATE_CLOSED);
                     } else {
@@ -113,7 +116,7 @@ void Gate::update() {
             
         case GATE_CLOSED:
             // Gate is closed - sensor should be HIGH
-            if (!_sensorState) {
+            if (!_sensorLockGate) {
                 // Sensor went LOW - gate is no longer closed
                 // Since we were closed, assume opening
                 _updateGateState(GATE_OPENING);
@@ -122,7 +125,7 @@ void Gate::update() {
             
         case GATE_OPENING:
             // Check for instant closed state detection (sensor HIGH)
-            if (_sensorState) {
+            if (_sensorLockGate) {
                 // Sensor HIGH - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
             } else if (currentTime - _lastStateChange >= 20000) {
@@ -134,7 +137,7 @@ void Gate::update() {
             
         case GATE_OPEN:
             // Gate is open - sensor should be LOW
-            if (_sensorState) {
+            if (_sensorLockGate) {
                 // Sensor HIGH - gate is closed (instant detection per Requirement 2.3 & 2.6)
                 // This handles manual closure or external factors closing the gate
                 _updateGateState(GATE_CLOSED);
@@ -143,7 +146,7 @@ void Gate::update() {
             
         case GATE_CLOSING:
             // Check for instant closed state detection (sensor HIGH)
-            if (_sensorState) {
+            if (_sensorLockGate) {
                 // Sensor HIGH - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
             } else if (currentTime - _lastStateChange >= 20000) {
@@ -185,7 +188,7 @@ void Gate::toggle() {
         case GATE_UNKNOWN:
             Serial.println("[GATE] Gate state unknown - attempting to determine state and operate");
             // In unknown state, try to determine current state based on sensor and operate accordingly
-            if (_sensorState) {
+            if (_sensorLockGate) {
                 // Sensor HIGH - gate is closed, so open it
                 Serial.println("[GATE] Sensor HIGH in unknown state - treating as closed, opening gate");
                 _updateGateState(GATE_CLOSED);
@@ -302,8 +305,8 @@ String Gate::getStateString() const {
     }
 }
 
-bool Gate::getSensorState() const {
-    return _sensorState;
+bool Gate::getSensorLockGate() const {
+    return _sensorLockGate;
 }
 
 
@@ -337,7 +340,7 @@ void Gate::_updateGateState(GateState newState) {
 
 bool Gate::_readSensor() {
     // Read sensor state - HIGH when gate is closed, LOW when open/moving
-    return digitalRead(PIN_SENSOR_GATE_OPEN);
+    return digitalRead(PIN_SENSOR_GATE_LOCK);
 }
 
 void Gate::_activateRelay(int relayPin, const char* relayName) {
@@ -431,7 +434,7 @@ bool Gate::_isValidStateTransition(GateState from, GateState to) {
 void Gate::_handleBootupState() {
     Serial.println("[GATE] Handling bootup state detection");
     
-    if (_sensorState) {
+    if (_sensorLockGate) {
         // Sensor HIGH - gate is closed
         _updateGateState(GATE_CLOSED);
         Serial.println("[GATE] Boot-up: Gate detected as CLOSED (sensor HIGH)");

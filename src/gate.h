@@ -24,10 +24,8 @@ extern const int PIN_RELAY_GATE_OPEN;  // Open relay control
 extern const int PIN_RELAY_GATE_STOP;  // Stop relay control
 
 // Sensor Input
-extern const int PIN_SENSOR_GATE_OPEN;  // High when gate is closed; Low when gate is: open, opening or closing
+extern const int PIN_SENSOR_GATE_LOCK;  // High when gate is closed; Low when gate is: open, opening or closing
 
-// Button Input
-extern const int PIN_BUTTON;           // Manual control button
 
 // ============================================================================
 // GATE STATE ENUMERATION
@@ -119,7 +117,7 @@ public:
      * Get current sensor state
      * @return true if sensor is HIGH (gate is closed), false otherwise
      */
-    bool getSensorState() const;
+    bool getSensorLockGate() const;
 
 private:
     // Timer management
@@ -129,8 +127,8 @@ private:
     // State tracking
     GateState _currentState;    // Current gate state
     GateState _previousState;   // Previous state for change detection
-    bool _sensorState;          // Current sensor reading
-    bool _previousSensorState;  // Previous sensor reading for debouncing
+    bool _sensorLockGate;          // Current sensor reading
+    bool _previousSensorLockGate;  // Previous sensor reading for debouncing
     
     // Timing variables
     unsigned long _lastStateChange;     // Timestamp of last state change
