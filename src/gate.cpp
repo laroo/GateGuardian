@@ -166,7 +166,7 @@ void Gate::update() {
     switch (_currentState) {
         case GATE_UNKNOWN:
             // Determine initial state based on sensor
-            if (_sensorLockGate) {
+            if (_sensorExternalRelay) {
                 // Sensor HIGH - gate is closed (instant detection)
                 _updateGateState(GATE_CLOSED);
             } else {
@@ -186,7 +186,7 @@ void Gate::update() {
             
         case GATE_CLOSED:
             // Gate is closed - sensor should be HIGH
-            if (!_sensorLockGate) {
+            if (!_sensorExternalRelay) {
                 // Sensor went LOW - gate is no longer closed
                 // Since we were closed, assume opening
                 _updateGateState(GATE_OPENING);
@@ -195,7 +195,7 @@ void Gate::update() {
             
         case GATE_OPENING:
             // Check for instant closed state detection (sensor HIGH)
-            if (_sensorLockGate) {
+            if (_sensorExternalRelay) {
                 // Sensor HIGH - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
             } else if (currentTime - _lastStateChange >= 20000) {
@@ -207,7 +207,7 @@ void Gate::update() {
             
         case GATE_OPEN:
             // Gate is open - sensor should be LOW
-            if (_sensorLockGate) {
+            if (_sensorExternalRelay) {
                 // Sensor HIGH - gate is closed (instant detection per Requirement 2.3 & 2.6)
                 // This handles manual closure or external factors closing the gate
                 _updateGateState(GATE_CLOSED);
@@ -216,7 +216,7 @@ void Gate::update() {
             
         case GATE_CLOSING:
             // Check for instant closed state detection (sensor HIGH)
-            if (_sensorLockGate) {
+            if (_sensorExternalRelay) {
                 // Sensor HIGH - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
             } else if (currentTime - _lastStateChange >= 20000) {
