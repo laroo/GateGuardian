@@ -20,6 +20,34 @@ v1.1
 v1.0
 - Initial release
 
+## MQTT Configuration
+
+### MQTT Topics
+
+```
+gateguardian/state = CLOSED
+gateguardian/sensor/lock = 0
+gateguardian/sensor/lights = 0
+gateguardian/sensor/photo_eye = 0
+gateguardian/sensor/external_relay = 0
+gateguardian/client_id = esp32_gate_FFAA00
+gateguardian/uptime = 1510
+```
+
+### MQTT Commands
+
+```
+gateguardian/command = OPEN
+gateguardian/command = CLOSE
+gateguardian/command = STOP
+```
+
+## Home Assistant Configuration
+
+The Home Assistant configuration can be found [here](home-assistant/configuration.yaml).
+
+![GateGuardian_HomeAssistant](GateGuardian_HomeAssistant.png)
+
 ## Schematics and PCB
 
 Used LibrePCB to design the schematics and PCB.
