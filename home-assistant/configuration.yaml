@@ -1,0 +1,45 @@
+mqtt:
+  sensor:
+
+    - name: GateGuardian State
+      unique_id: 'gateguardian_state'
+      state_topic: "gateguardian/state"
+      value_template: "{{ value|title }}"
+
+  binary_sensor:
+
+    - name: Gate Lock
+      unique_id: 'gateguardian_sensor_lock'
+      state_topic: "gateguardian/sensor/lock"
+      payload_on: "1"
+      payload_off: "0"
+
+    - name: Gate Lights
+      unique_id: 'gateguardian_sensor_lights'
+      state_topic: "gateguardian/sensor/lights"
+      payload_on: "1"
+      payload_off: "0"
+
+    - name: Photo Eye
+      unique_id: 'gateguardian_sensor_photo_eye'
+      state_topic: "gateguardian/sensor/photo_eye"
+      payload_on: "1"
+      payload_off: "0"
+
+    - name: External Relay
+      unique_id: 'gateguardian_sensor_external_relay'
+      state_topic: "gateguardian/sensor/external_relay"
+      payload_on: "1"
+      payload_off: "0"
+
+  button:
+
+    - name: Gate Open
+      unique_id: 'gateguardian_button_open'
+      command_topic: "gateguardian/command"
+      payload_press: "OPEN"
+
+    - name: Gate Close
+      unique_id: 'gateguardian_button_close'
+      command_topic: "gateguardian/command"
+      payload_press: "CLOSE"

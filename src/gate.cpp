@@ -166,18 +166,18 @@ void Gate::update() {
     switch (_currentState) {
         case GATE_UNKNOWN:
             // Determine initial state based on sensor
-            if (_sensorExternalRelay) {
-                // Sensor HIGH - gate is closed (instant detection)
+            if (!_sensorExternalRelay) {
+                // Sensor LOW - gate is closed (instant detection)
                 _updateGateState(GATE_CLOSED);
             } else {
-                // Sensor is LOW - could be open, opening, or closing
+                // Sensor is HIGH - could be open, opening, or closing
                 // Wait for 20 seconds to determine stable state
                 if (currentTime - _lastStateChange >= 20000) {
-                    if (_sensorLockGate) {
-                        // Sensor HIGH after 20s - gate is closed (instant)
+                    if (!_sensorExternalRelay) {
+                        // Sensor LOW after 20s - gate is closed (instant)
                         _updateGateState(GATE_CLOSED);
                     } else {
-                        // Sensor LOW after 20s - gate is open
+                        // Sensor HIGH after 20s - gate is open
                         _updateGateState(GATE_OPEN);
                     }
                 }
@@ -185,18 +185,18 @@ void Gate::update() {
             break;
             
         case GATE_CLOSED:
-            // Gate is closed - sensor should be HIGH
-            if (!_sensorExternalRelay) {
-                // Sensor went LOW - gate is no longer closed
+            // Gate is closed - sensor should be LOW
+            if (_sensorExternalRelay) {
+                // Sensor went HIGH - gate is no longer closed
                 // Since we were closed, assume opening
                 _updateGateState(GATE_OPENING);
             }
             break;
             
         case GATE_OPENING:
-            // Check for instant closed state detection (sensor HIGH)
-            if (_sensorExternalRelay) {
-                // Sensor HIGH - gate is closed (instant detection per Requirement 2.3)
+            // Check for instant closed state detection (sensor LOW)
+            if (!_sensorExternalRelay) {
+                // Sensor LOW - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
             } else if (currentTime - _lastStateChange >= 20000) {
                 // Gate takes ~20 seconds to fully open (Requirement 2.3)
@@ -206,18 +206,18 @@ void Gate::update() {
             break;
             
         case GATE_OPEN:
-            // Gate is open - sensor should be LOW
-            if (_sensorExternalRelay) {
-                // Sensor HIGH - gate is closed (instant detection per Requirement 2.3 & 2.6)
+            // Gate is open - sensor should be HIGH
+            if (!_sensorExternalRelay) {
+                // Sensor LOW - gate is closed (instant detection per Requirement 2.3 & 2.6)
                 // This handles manual closure or external factors closing the gate
                 _updateGateState(GATE_CLOSED);
             }
             break;
             
         case GATE_CLOSING:
-            // Check for instant closed state detection (sensor HIGH)
-            if (_sensorExternalRelay) {
-                // Sensor HIGH - gate is closed (instant detection per Requirement 2.3)
+            // Check for instant closed state detection (sensor LOW)
+            if (!_sensorExternalRelay) {
+                // Sensor LOW - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
             } else if (currentTime - _lastStateChange >= 20000) {
                 // Gate closing - check if 20 seconds elapsed
