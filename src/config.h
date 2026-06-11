@@ -24,6 +24,11 @@
 #define MQTT_PASSWORD nullptr
 #endif
 
+// Boot delay (Requirement 8) - delay in ms before normal initialization after power-on
+#ifndef BOOT_DELAY_MS
+#define BOOT_DELAY_MS 15000
+#endif
+
 // MQTT topic prefix
 #ifndef MQTT_TOPIC_STATUS
 #define MQTT_TOPIC_STATUS "gateguardian/status"

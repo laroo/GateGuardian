@@ -88,3 +88,20 @@ The ESP32 Swing Gate Controller is an embedded system that manages the operation
 2. Make the MQTT broker configurable, use broker.hivemq.com:1883 with a random client ID for testing.
 2. Publish a topic with the current gate state every 10 seconds
 3. Subscribe a topic and listen for a gate open or close value
+
+### Requirement 8
+
+**User Story:** As a property owner, I want the ESP32 gate controller to boot safely after a power outage, so that the Sommer Twist 350 gate motor is not locked up by spurious relay signals during ESP32 startup.
+
+#### Background
+
+During a power outage both the Sommer Twist 350 and the ESP32 boot simultaneously. The ESP32 GPIO pins used for relay control can float HIGH during startup, causing the relay module to activate and send unintended open/close signals to the Sommer motor controller. This leaves the Sommer in an unresponsive state where it ignores all direct (non-ESP32) gate commands. The current workaround is to manually press the ESP32 reset button.
+
+#### Acceptance Criteria
+
+1. WHEN the ESP32 boots THEN the system SHALL wait a configurable delay (default 15 seconds) before performing normal initialization, to allow the Sommer Twist 350 to fully boot first
+2. WHEN the boot delay is active THEN the relay GPIO pins SHALL be held LOW to prevent any spurious signals to the gate motor
+3. WHEN the boot delay completes THEN the system SHALL perform a software reset via `ESP.restart()` to ensure a clean initialization with stable GPIO states
+4. WHEN the boot delay is active THEN the system SHALL blink both LEDs in a distinct pattern to indicate the boot-delay state
+5. WHEN the boot delay is active THEN the system SHALL output serial messages indicating the boot delay countdown
+6. The boot delay duration SHALL be a compile-time constant configurable in `config.h`

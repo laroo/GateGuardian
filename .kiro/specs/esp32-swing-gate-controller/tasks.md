@@ -140,3 +140,17 @@
     - Test MQTT connection and reconnection scenarios
     - Verify message publishing and command handling
     - Test network failure recovery
+
+- [x] 6. Implement boot delay and software reset for power outage safety
+
+  - [x] 6.1 Add boot delay compile-time constant
+    - Add `BOOT_DELAY_MS` constant to `config.h` with default value of 15000 (15 seconds)
+    - _Requirements: 8.1, 8.6_
+
+  - [x] 6.2 Implement boot delay logic in `setup()`
+    - At the very start of `setup()`, before any other initialization, force relay pins LOW with `pinMode` + `digitalWrite`
+    - Initialize serial and print boot delay countdown messages (once per second)
+    - Blink both LEDs in a distinct pattern during the delay to indicate boot-delay state
+    - After the delay completes, call `ESP.restart()` to perform a clean reboot
+    - Use a flag (e.g. RTC memory or a boot-reason check) to distinguish first boot from the software-reset boot, so the delay only runs once
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_

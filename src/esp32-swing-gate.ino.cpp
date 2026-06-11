@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include "esp_system.h"
 #include "esp32-hal-gpio.h"
 #include "gate.h"
 #include "ledmanager.h"
@@ -193,6 +194,7 @@ bool buttonPressed = false; // Flag to track button press events
 // FUNCTION DECLARATIONS
 // ============================================================================
 void initializeGPIO();
+void handleBootDelay();
 // void handleButtonInput();
 void printConfigSummary();
 int checkConnection();
@@ -244,7 +246,10 @@ void onButtonRelease() {
 // SETUP FUNCTION
 // ============================================================================
 void setup() {
-  
+
+  // Boot delay for power outage safety (Requirement 8)
+  handleBootDelay();
+
   // Initialize GPIO pins (Requirement 5.1)
   initializeGPIO();
 
@@ -591,6 +596,80 @@ void loop() {
 
   // Small delay to prevent excessive CPU usage
   delay(10);
+}
+
+// ============================================================================
+// BOOT DELAY (Requirement 8)
+// ============================================================================
+void handleBootDelay() {
+  // Only run boot delay on power-on reset, not after software reset
+  esp_reset_reason_t reason = esp_reset_reason();
+  if (reason == ESP_RST_SW) {
+    // This is the clean reboot after boot delay — skip
+    Serial.begin(115200);
+    delay(100);
+    Serial.println("[BOOT] Software reset detected, skipping boot delay");
+    return;
+  }
+
+  // Force relay pins LOW immediately to prevent spurious signals
+  pinMode(config.openRelayPin, OUTPUT);
+  pinMode(config.closeRelayPin, OUTPUT);
+  pinMode(config.stopRelayPin, OUTPUT);
+  digitalWrite(config.openRelayPin, LOW);
+  digitalWrite(config.closeRelayPin, LOW);
+  digitalWrite(config.stopRelayPin, LOW);
+
+  // Initialize LEDs for boot delay indication
+  pinMode(config.redLedPin, OUTPUT);
+  pinMode(config.greenLedPin, OUTPUT);
+
+  Serial.begin(115200);
+  delay(100);
+  Serial.println("[BOOT] Power-on detected, starting boot delay...");
+  Serial.print("[BOOT] Waiting ");
+  Serial.print(BOOT_DELAY_MS / 1000);
+  Serial.println(" seconds for Sommer Twist 350 to initialize");
+
+  unsigned long startTime = millis();
+  unsigned long remaining = BOOT_DELAY_MS;
+  int lastSecond = -1;
+  bool ledState = false;
+
+  while (remaining > 0) {
+    unsigned long elapsed = millis() - startTime;
+    remaining = (elapsed >= BOOT_DELAY_MS) ? 0 : (BOOT_DELAY_MS - elapsed);
+    int currentSecond = remaining / 1000;
+
+    // Print countdown once per second
+    if (currentSecond != lastSecond) {
+      lastSecond = currentSecond;
+      Serial.print("[BOOT] Countdown: ");
+      Serial.print(currentSecond + 1);
+      Serial.println("s remaining");
+    }
+
+    // Blink both LEDs together (250ms on/off) as boot-delay indicator
+    ledState = (millis() / 250) % 2 == 0;
+    digitalWrite(config.redLedPin, ledState ? HIGH : LOW);
+    digitalWrite(config.greenLedPin, ledState ? HIGH : LOW);
+
+    // Keep relay pins forced LOW during delay
+    digitalWrite(config.openRelayPin, LOW);
+    digitalWrite(config.closeRelayPin, LOW);
+    digitalWrite(config.stopRelayPin, LOW);
+
+    delay(10);
+  }
+
+  // Turn LEDs off before restart
+  digitalWrite(config.redLedPin, LOW);
+  digitalWrite(config.greenLedPin, LOW);
+
+  Serial.println("[BOOT] Boot delay complete, performing software reset...");
+  Serial.flush();
+  delay(100);
+  ESP.restart();
 }
 
 // ============================================================================
