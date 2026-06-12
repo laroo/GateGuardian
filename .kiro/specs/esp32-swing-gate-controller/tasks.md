@@ -178,3 +178,16 @@
   - [x] 7.4 Handle web requests in main loop
     - Call `server.handleClient()` and `ElegantOTA.loop()` when network connection is active
     - _Requirements: 9.8_
+
+  - [x] 7.5 Implement `/status` JSON endpoint
+    - Register `/status` endpoint that returns a JSON object with `clientId`, `uptime` (seconds since boot), and `gateState` (from `gate->getStateString()`)
+    - _Requirements: 9.9_
+
+  - [x] 7.6 Implement HTML dashboard on root endpoint
+    - Replace the plain-text root (`/`) handler with a full HTML page
+    - Load Pico CSS from CDN for styling
+    - Load htmx from CDN for dynamic updates
+    - Display `clientId`, `uptime` (HH:MM:SS), and gate state in dedicated elements
+    - Use htmx `hx-get="/status"` with `hx-trigger="every 1s"` to poll and update values in place
+    - Include "Open" and "Close" buttons using htmx `hx-post` (or `hx-get`) targeting `/gate/open` and `/gate/close`
+    - _Requirements: 9.2, 9.10, 9.11, 9.12, 9.13_

@@ -113,10 +113,15 @@ During a power outage both the Sommer Twist 350 and the ESP32 boot simultaneousl
 #### Acceptance Criteria
 
 1. WHEN the ESP32 has a network connection THEN the system SHALL run an HTTP web server on port 80
-2. WHEN a user accesses the root endpoint (`/`) THEN the system SHALL return a text response identifying the device as GateGuardian
+2. WHEN a user accesses the root endpoint (`/`) THEN the system SHALL return an HTML page that serves as the GateGuardian dashboard
 3. WHEN a user accesses `/gate/open` THEN the system SHALL command the gate to open and return a confirmation response
 4. WHEN a user accesses `/gate/close` THEN the system SHALL command the gate to close and return a confirmation response
 5. WHEN a user accesses `/gate/stop` THEN the system SHALL command the gate to stop and return a confirmation response
 6. WHEN a user accesses the ElegantOTA endpoint THEN the system SHALL provide an over-the-air firmware update interface
 7. The OTA update SHALL require authentication via configurable `OTA_USERNAME` and `OTA_PASSWORD` compile-time constants in `config.h`
 8. The web server and OTA handler SHALL be updated in the main loop to process incoming requests
+9. WHEN a user accesses `/status` THEN the system SHALL return a JSON response containing `clientId`, `uptime` (in seconds), and `gateState` (from `getStateString()`)
+10. The homepage dashboard SHALL display the `clientId`, `uptime` (formatted as HH:MM:SS), and current gate state, updated every second without a full page reload
+11. The homepage SHALL use htmx (loaded from CDN) to poll `/status` every second and update the displayed values in place
+12. The homepage SHALL include "Open" and "Close" buttons that each trigger their respective `/gate/open` and `/gate/close` endpoints using htmx without a full page reload
+13. The homepage SHALL use Pico CSS (loaded from CDN) for styling, providing a clean and minimal layout
