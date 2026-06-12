@@ -154,3 +154,27 @@
     - After the delay completes, call `ESP.restart()` to perform a clean reboot
     - Use a flag (e.g. RTC memory or a boot-reason check) to distinguish first boot from the software-reset boot, so the delay only runs once
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
+- [x] 7. Implement web server and OTA updates
+
+  - [x] 7.1 Set up HTTP web server on port 80
+    - Initialize `WebServer` on port 80
+    - Register root endpoint (`/`) returning a GateGuardian identification response
+    - _Requirements: 9.1, 9.2_
+
+  - [x] 7.2 Implement gate control endpoints
+    - Register `/gate/open` endpoint to command gate open
+    - Register `/gate/close` endpoint to command gate close
+    - Register `/gate/stop` endpoint to command gate stop
+    - Each endpoint returns a text confirmation response
+    - _Requirements: 9.3, 9.4, 9.5_
+
+  - [x] 7.3 Integrate ElegantOTA for firmware updates
+    - Initialize ElegantOTA with the web server instance via `ElegantOTA.begin(&server)`
+    - Configure OTA authentication via `OTA_USERNAME` and `OTA_PASSWORD` compile-time constants in `config.h`
+    - Call `ElegantOTA.loop()` in the main loop
+    - _Requirements: 9.6, 9.7_
+
+  - [x] 7.4 Handle web requests in main loop
+    - Call `server.handleClient()` and `ElegantOTA.loop()` when network connection is active
+    - _Requirements: 9.8_

@@ -100,8 +100,35 @@ pip install -r requirements.txt
 pio run
 ```
 
-### Upload
+### Upload (Serial)
 
 ```
 pio run --target upload -v
 ```
+
+### OTA (Over-the-Air) Update
+
+The firmware includes [ElegantOTA](https://github.com/ayushsharma82/ElegantOTA) for wireless firmware updates over the network.
+
+1. Open a browser and navigate to `http://<device-ip>/update`
+2. Authenticate with the configured `OTA_USERNAME` and `OTA_PASSWORD`
+3. Select the firmware binary (`.pio/build/esp32/firmware.bin`) and upload
+
+OTA credentials are set as compile-time build flags in `private_config.ini`:
+
+```ini
+'-D OTA_USERNAME=youruser'
+'-D OTA_PASSWORD=yourpassword'
+```
+
+### Web Interface
+
+The device runs an HTTP server on port 80 with the following endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| `/` | Device identification |
+| `/gate/open` | Command gate to open |
+| `/gate/close` | Command gate to close |
+| `/gate/stop` | Command gate to stop |
+| `/update` | ElegantOTA firmware update page |

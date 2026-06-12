@@ -1,12 +1,18 @@
 #pragma once
 
-// OTA password
+// Stringify helper macros
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+// OTA credentials (passed as bare identifiers via -D flags, stringified here)
 #ifndef OTA_USERNAME
 #error Need to define OTA_USERNAME
 #endif
 #ifndef OTA_PASSWORD
 #error Need to define OTA_PASSWORD
 #endif
+#define OTA_USERNAME_STR TOSTRING(OTA_USERNAME)
+#define OTA_PASSWORD_STR TOSTRING(OTA_PASSWORD)
 
 // MQTT broker
 #ifndef MQTT_BROKER

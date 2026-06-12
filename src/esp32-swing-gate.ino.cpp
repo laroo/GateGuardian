@@ -414,7 +414,7 @@ void setup() {
   //   gate->stop();
   //   server.send(200, "text/plain", "Gate stopping...");
   // });
-  ElegantOTA.begin(&server);
+  ElegantOTA.begin(&server, OTA_USERNAME_STR, OTA_PASSWORD_STR);
   server.begin();
   Serial.println("HTTP server started");
 

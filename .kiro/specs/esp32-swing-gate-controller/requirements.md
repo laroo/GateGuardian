@@ -105,3 +105,18 @@ During a power outage both the Sommer Twist 350 and the ESP32 boot simultaneousl
 4. WHEN the boot delay is active THEN the system SHALL blink both LEDs in a distinct pattern to indicate the boot-delay state
 5. WHEN the boot delay is active THEN the system SHALL output serial messages indicating the boot delay countdown
 6. The boot delay duration SHALL be a compile-time constant configurable in `config.h`
+
+### Requirement 9
+
+**User Story:** As a property owner, I want to access the gate controller from a webpage, so that I can control the gate and update the firmware remotely without physical access to the ESP32.
+
+#### Acceptance Criteria
+
+1. WHEN the ESP32 has a network connection THEN the system SHALL run an HTTP web server on port 80
+2. WHEN a user accesses the root endpoint (`/`) THEN the system SHALL return a text response identifying the device as GateGuardian
+3. WHEN a user accesses `/gate/open` THEN the system SHALL command the gate to open and return a confirmation response
+4. WHEN a user accesses `/gate/close` THEN the system SHALL command the gate to close and return a confirmation response
+5. WHEN a user accesses `/gate/stop` THEN the system SHALL command the gate to stop and return a confirmation response
+6. WHEN a user accesses the ElegantOTA endpoint THEN the system SHALL provide an over-the-air firmware update interface
+7. The OTA update SHALL require authentication via configurable `OTA_USERNAME` and `OTA_PASSWORD` compile-time constants in `config.h`
+8. The web server and OTA handler SHALL be updated in the main loop to process incoming requests
