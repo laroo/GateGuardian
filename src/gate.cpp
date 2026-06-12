@@ -24,6 +24,10 @@ const int PIN_SENSOR_GATE_LIGHTS = 33;    // Gate lights sensor
 const int PIN_SENSOR_PHOTO_EYE = 36;      // Photo eye sensor (input only)
 const int PIN_SENSOR_EXTERNAL_RELAY = 35; // External relay sensor (input only)
 
+static const unsigned long GATE_OPEN_TRAVEL_MS  = 20000; // Max travel time for opening (ms)
+static const unsigned long GATE_CLOSE_TRAVEL_MS = 30000; // Max travel time for closing (ms)
+static const unsigned long GATE_BOOT_SETTLE_MS  = 20000; // Boot-time settle period (ms)
+
 
 // ============================================================================
 // GATE CLASS IMPLEMENTATION
@@ -172,7 +176,7 @@ void Gate::update() {
             } else {
                 // Sensor is HIGH - could be open, opening, or closing
                 // Wait for 20 seconds to determine stable state
-                if (currentTime - _lastStateChange >= 20000) {
+                if (currentTime - _lastStateChange >= GATE_BOOT_SETTLE_MS) {
                     if (!_sensorExternalRelay) {
                         // Sensor LOW after 20s - gate is closed (instant)
                         _updateGateState(GATE_CLOSED);
@@ -198,7 +202,7 @@ void Gate::update() {
             if (!_sensorExternalRelay) {
                 // Sensor LOW - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
-            } else if (currentTime - _lastStateChange >= 20000) {
+            } else if (currentTime - _lastStateChange >= GATE_OPEN_TRAVEL_MS) {
                 // Gate takes ~20 seconds to fully open (Requirement 2.3)
                 // Sensor LOW after 20s - gate is now fully open
                 _updateGateState(GATE_OPEN);
@@ -219,9 +223,9 @@ void Gate::update() {
             if (!_sensorExternalRelay) {
                 // Sensor LOW - gate is closed (instant detection per Requirement 2.3)
                 _updateGateState(GATE_CLOSED);
-            } else if (currentTime - _lastStateChange >= 20000) {
-                // Gate closing - check if 20 seconds elapsed
-                // Sensor LOW after 20s - gate is still open (operation failed)
+            } else if (currentTime - _lastStateChange >= GATE_CLOSE_TRAVEL_MS) {
+                // Gate closing - check if 35 seconds elapsed
+                // Sensor still HIGH after timeout - gate failed to close, revert to OPEN
                 _updateGateState(GATE_OPEN);
             }
             break;
