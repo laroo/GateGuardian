@@ -191,3 +191,44 @@
     - Use htmx `hx-get="/status"` with `hx-trigger="every 1s"` to poll and update values in place
     - Include "Open" and "Close" buttons using htmx `hx-post` (or `hx-get`) targeting `/gate/open` and `/gate/close`
     - _Requirements: 9.2, 9.10, 9.11, 9.12, 9.13_
+
+- [x] 8. Implement Gate class unit tests
+
+  - [x] 8.1 Make Gate sensor methods and time source virtual
+    - Change `_readSensorLock()`, `_readSensorLights()`, `_readSensorPhotoEye()`, `_readSensorExternalRelay()` from `private` to `virtual protected` in `gate.h`
+    - Add a `virtual protected` method `_millis()` that defaults to calling `::millis()` in `gate.cpp`; replace all direct `millis()` calls in `gate.cpp` with `_millis()`
+    - _Requirements: 10.1_
+
+  - [x] 8.2 Add PlatformIO native test environment
+    - Add `[env:native]` to `platformio.ini` with `platform = native` and `test_build_src_filter` pointing to `src/gate.cpp` only (exclude Arduino-specific files)
+    - Add Arduino stub header `test/stubs/Arduino.h` providing `String`, `Serial` stub, `pinMode`, `digitalWrite`, `digitalRead` as no-ops, and a mockable `millis()` returning a global variable `_mock_millis_value`
+    - _Requirements: 10.6_
+
+  - [x] 8.3 Implement `GateTestHarness`
+    - Create `test/GateTestHarness.h` as a subclass of `Gate`
+    - Override `_millis()` to return a `unsigned long _simTime` member
+    - Override all four `_readSensor*()` methods to return bool values from a `SensorRow` struct (`sensorLock`, `sensorLights`, `sensorPhotoEye`, `sensorExternalRelay`)
+    - Expose `void setSimTime(unsigned long t)` and `void setSensors(SensorRow row)` for the test runner to drive
+    - _Requirements: 10.2_
+
+  - [x] 8.4 Implement CSV sequence parser
+    - Create `test/SequenceParser.h` that reads a CSV file path, parses the header row, and returns a `std::vector<SequenceRow>` where each row holds `timestamp_ms`, the four sensor bools, and `expectedState` string
+    - Skip lines starting with `#` and ignore blank lines
+    - _Requirements: 10.3_
+
+  - [x] 8.5 Implement sequence test runner
+    - Create `test/test_gate_sequences.cpp` as the PlatformIO Unity test file
+    - For each CSV file found in `test/sequences/`, run a test case that:
+      - Constructs a fresh `GateTestHarness`, calls `initialize()`
+      - Iterates rows in order: calls `setSimTime(row.timestamp_ms)`, `setSensors(row)`, `gate.update()`
+      - When `expectedState` is non-empty, calls `TEST_ASSERT_EQUAL_STRING(expectedState, gate.getStateString())`
+    - Print sequence filename, timestamp, expected, and actual on failure
+    - _Requirements: 10.4, 10.7_
+
+  - [x] 8.6 Write sequence CSV files
+    - `test/sequences/boot_closed.csv` — lock=1 at t=0, assert `CLOSED` after first `update()`
+    - `test/sequences/boot_open.csv` — lock=0 at t=0, lock=0 at t=20100, assert `OPEN`
+    - `test/sequences/open_cycle.csv` — start closed (lock=1, t=0→CLOSED), issue `openGate()` at t=100, lock=0 from t=100, assert `OPENING` at t=200, assert `OPEN` at t=20200
+    - `test/sequences/close_cycle.csv` — start open (lock=0 stable at t=20100→OPEN), issue `closeGate()` at t=20200, lock=1 at t=40300, assert `CLOSED`
+    - `test/sequences/manual_close.csv` — start open (lock=0 stable→OPEN), lock goes 1 at t=21000 without any command, assert `CLOSED` at t=21100
+    - _Requirements: 10.5_

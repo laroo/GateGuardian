@@ -76,8 +76,8 @@ void Gate::initialize() {
     _previousSensorExternalRelay = _sensorExternalRelay;
     
     _initialized = true;
-    _lastStateChange = millis();
-    unsigned long currentTime = millis();
+    _lastStateChange = _millis();
+    unsigned long currentTime = _millis();
     _lastSensorReadLock = currentTime;
     _lastSensorReadLights = currentTime;
     _lastSensorReadPhotoEye = currentTime;
@@ -97,7 +97,7 @@ void Gate::update() {
     _relayTimer.tick();
     
     // Read sensor states with debouncing
-    unsigned long currentTime = millis();
+    unsigned long currentTime = _millis();
     
     bool anySensorChanged = false;
     // Lock sensor debouncing (50ms)
@@ -431,8 +431,12 @@ void Gate::_updateGateState(GateState newState) {
         _logStateChange(_currentState, newState);
         _previousState = _currentState;
         _currentState = newState;
-        _lastStateChange = millis();
+        _lastStateChange = _millis();
     }
+}
+
+unsigned long Gate::_millis() {
+    return millis();
 }
 
 bool Gate::_readSensorLock() {
@@ -464,7 +468,7 @@ void Gate::_activateRelay(int relayPin, const char* relayName) {
     // Activate the relay
     digitalWrite(relayPin, HIGH);
     _relayActive = true;
-    _relayActivationTime = millis();
+    _relayActivationTime = _millis();
     
     Serial.print("[RELAY] ");
     Serial.print(relayName);
@@ -484,7 +488,7 @@ void Gate::_deactivateRelays() {
     digitalWrite(PIN_RELAY_GATE_STOP, LOW);
     
     if (_relayActive) {
-        unsigned long activeDuration = millis() - _relayActivationTime;
+        unsigned long activeDuration = _millis() - _relayActivationTime;
         Serial.print("[RELAY] Relay deactivated after ");
         Serial.print(activeDuration);
         Serial.println("ms");

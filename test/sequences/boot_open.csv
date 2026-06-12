@@ -1,0 +1,9 @@
+# boot_open.csv
+# Gate sensor LOW at boot: lock=0, external relay=1 → UNKNOWN, wait 20s → OPEN.
+# _handleBootupState() sees sensorLockGate=false → UNKNOWN.
+# After 20000ms the state machine (GATE_UNKNOWN branch) sees sensorExternalRelay=1 → OPEN.
+# timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,expectedState
+0,0,0,0,1,UNKNOWN
+100,0,0,0,1,
+10000,0,0,0,1,
+20100,0,0,0,1,OPEN

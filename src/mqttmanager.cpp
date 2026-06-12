@@ -232,7 +232,7 @@ bool MQTTManager::connect() {
     return connected;
 }
 
-bool MQTTManager::publishStatus(const String& status) {
+bool MQTTManager::publishStatus() {
     Serial.println("[MQTT] publish status...");
     if (!_initialized || !_mqttClient || !_mqttClient->connected()) {
         Serial.println("[ERROR] MQTT not connected, cannot publish status");
@@ -377,7 +377,7 @@ void MQTTManager::_messageCallback(char* topic, byte* payload, unsigned int leng
 bool MQTTManager::_publishTimerCallback(void* argument) {
     // Publish current gate status
     if (_gateController && isConnected()) {
-        publishStatus(_gateController->getStateString());
+        publishStatus();
     }
     return true; // Continue periodic publishing
 }
@@ -444,6 +444,6 @@ void MQTTManager::_logCommandReceived(const String& command) {
 void MQTTManager::_sensorChangeCallback() {
     if (_instance && _instance->_gateController) {
         Serial.println("[MQTT] Sensor change detected, publishing status...");
-        _instance->publishStatus("");
+        _instance->publishStatus();
     }
 }

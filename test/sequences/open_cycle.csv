@@ -1,0 +1,18 @@
+# open_cycle.csv
+# Full open cycle: boot closed, issue openGate(), gate travels 20s, reaches OPEN.
+# Row with action=openGate is handled by the test runner calling gate.openGate()
+# before gate.update() at that timestamp — see OPEN_CMD marker in expectedState.
+#
+# Sequence:
+#   t=0   : lock=1, extRelay=0 → initialize() → CLOSED
+#   t=100 : openGate() called externally, state → OPENING, extRelay goes 1 (gate moving)
+#   t=200 : first update() after open command → still OPENING (< 20s)
+#   t=20200: 20s elapsed since OPENING → extRelay still 1 → OPEN
+#
+# timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,expectedState
+0,1,0,0,0,CLOSED
+10,1,0,0,1,OPEN_CMD
+100,0,0,0,1,OPENING
+10000,0,0,0,1,OPENING
+20000,0,0,0,1,OPENING
+20200,0,0,0,1,OPEN

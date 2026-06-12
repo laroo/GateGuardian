@@ -100,6 +100,18 @@ pip install -r requirements.txt
 pio run
 ```
 
+### Test
+
+```
+pio test -v -e native
+```
+
+Run a single test:
+
+```
+TEST_FILTER=test_open_cycle pio test -v -e native
+```
+
 ### Upload (Serial)
 
 ```

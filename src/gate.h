@@ -181,15 +181,18 @@ private:
     
     // Private methods
     void _updateGateState(GateState newState);
-    bool _readSensorLock();
-    bool _readSensorLights();
-    bool _readSensorPhotoEye();
-    bool _readSensorExternalRelay();
     void _activateRelay(int relayPin, const char* relayName);
     void _deactivateRelays();
     void _logStateChange(GateState oldState, GateState newState);
     bool _isValidStateTransition(GateState from, GateState to);
     void _handleBootupState();
+
+protected:
+    virtual unsigned long _millis();
+    virtual bool _readSensorLock();
+    virtual bool _readSensorLights();
+    virtual bool _readSensorPhotoEye();
+    virtual bool _readSensorExternalRelay();
 };
 
 #endif // Gate_h

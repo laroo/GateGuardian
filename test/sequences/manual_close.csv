@@ -1,0 +1,15 @@
+# manual_close.csv
+# Gate is OPEN, then lock sensor goes HIGH externally (no close command).
+# The GATE_OPEN branch in update() sees sensorExternalRelay=0 → instant CLOSED.
+#
+# Sequence:
+#   t=0     : lock=0, extRelay=1 → UNKNOWN
+#   t=20100 : stable open → OPEN
+#   t=21000 : external factor closes gate: extRelay=0, lock=1 → CLOSED instantly
+#   t=21100 : confirm still CLOSED
+#
+# timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,expectedState
+0,0,0,0,1,UNKNOWN
+20100,0,0,0,1,OPEN
+21000,1,0,0,0,CLOSED
+21100,1,0,0,0,CLOSED

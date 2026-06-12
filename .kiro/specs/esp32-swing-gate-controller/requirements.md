@@ -125,3 +125,42 @@ During a power outage both the Sommer Twist 350 and the ESP32 boot simultaneousl
 11. The homepage SHALL use htmx (loaded from CDN) to poll `/status` every second and update the displayed values in place
 12. The homepage SHALL include "Open" and "Close" buttons that each trigger their respective `/gate/open` and `/gate/close` endpoints using htmx without a full page reload
 13. The homepage SHALL use Pico CSS (loaded from CDN) for styling, providing a clean and minimal layout
+
+### Requirement 10
+
+**User Story:** As a developer, I want to run automated unit tests for the Gate state machine on a host machine, so that I can verify all gate state transitions and sensor interactions without physical hardware.
+
+#### Background
+
+The `Gate` class uses `millis()` for all timing decisions and calls `_readSensorLock()`, `_readSensorLights()`, `_readSensorPhotoEye()`, and `_readSensorExternalRelay()` to obtain hardware sensor values. Both must be injectable in tests so that a complete gate operation sequence (e.g. boot → open command → 20 s travel → OPEN state) can be replayed at arbitrary speed without real hardware or real time delays.
+
+#### Acceptance Criteria
+
+1. The `Gate` class SHALL expose its four `_readSensor*()` methods and its time source as `virtual protected`, so that a test subclass can override them to inject controlled values without modifying production logic.
+
+2. A `GateTestHarness` subclass of `Gate` SHALL be provided in the test directory that:
+   - Overrides `_readSensorLock()`, `_readSensorLights()`, `_readSensorPhotoEye()`, and `_readSensorExternalRelay()` to return values from the currently active sequence row
+   - Overrides the time source (`_millis()`) to return a simulated timestamp instead of the real `millis()`
+
+3. Gate operation sequences SHALL be defined in CSV files with the following format:
+   - One header row: `timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,expectedState`
+   - Each data row specifies sensor values (0 = off / false, 1 = on / true) that are active **from** `timestamp_ms` until the next row's timestamp
+   - `expectedState` is the gate state string (`UNKNOWN`, `CLOSED`, `OPENING`, `OPEN`, `CLOSING`) that `getStateString()` SHALL return at that timestamp; an empty value means no assertion is made at that row
+   - CSV files SHALL be stored in `test/sequences/`
+
+4. The test runner SHALL, for each sequence file:
+   - Parse the CSV into an ordered list of rows
+   - For each row, advance the simulated clock to `timestamp_ms`, set the sensor values from that row, and call `gate.update()`
+   - After calling `update()`, WHEN `expectedState` is non-empty THEN assert that `gate.getStateString()` equals `expectedState`
+   - Report each failed assertion with the sequence filename, the row's `timestamp_ms`, the expected state, and the actual state
+
+5. The test suite SHALL include sequence files covering at minimum the following scenarios:
+   - **boot_closed**: Gate sensor reads lock=closed at t=0 → gate reaches `CLOSED`
+   - **boot_open**: Gate sensor reads lock=open at t=0, stable after 20 s → gate reaches `OPEN`
+   - **open_cycle**: Gate starts `CLOSED`, open command at t=100 ms, sensor stays open for 20 s → gate reaches `OPEN`
+   - **close_cycle**: Gate starts `OPEN`, close command at t=100 ms, sensor goes closed after 20 s → gate reaches `CLOSED`
+   - **manual_close**: Gate is `OPEN`, lock sensor goes HIGH without a close command → gate transitions immediately to `CLOSED`
+
+6. The tests SHALL be compiled and run in a PlatformIO `native` environment so they execute on the host machine without any ESP32 hardware or toolchain.
+
+7. WHEN all sequence assertions pass THEN the test run SHALL exit with code 0; WHEN any assertion fails THEN it SHALL exit with a non-zero code and print a summary of all failures.

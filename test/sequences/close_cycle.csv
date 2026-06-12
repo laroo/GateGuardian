@@ -1,0 +1,16 @@
+# close_cycle.csv
+# Full close cycle: boot open (after 20s stable), issue closeGate(), gate closes.
+#
+# Sequence:
+#   t=0     : lock=0, extRelay=1 → initialize() → UNKNOWN
+#   t=20100 : 20s elapsed, extRelay=1 → OPEN
+#   t=20200 : closeGate() called (CLOSE_CMD marker), state → CLOSING, extRelay stays 1
+#   t=20300 : update() → CLOSING
+#   t=40300 : 20s elapsed since CLOSING, lock goes 1, extRelay goes 0 → CLOSED (instant sensor)
+#
+# timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,expectedState
+0,0,0,0,1,UNKNOWN
+20100,0,0,0,1,OPEN
+20200,0,0,0,1,CLOSE_CMD
+20300,0,0,0,1,CLOSING
+40300,1,0,0,0,CLOSED

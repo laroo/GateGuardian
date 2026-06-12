@@ -64,10 +64,9 @@ public:
     
     /**
      * Publish gate status to MQTT broker
-     * @param status Gate status string to publish
      * @return true if publish successful
      */
-    bool publishStatus(const String& status);
+    bool publishStatus();
     
     void setClient(NetworkClient* client);
 

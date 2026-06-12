@@ -1,0 +1,6 @@
+# boot_closed.csv
+# Gate is closed at boot: lock sensor HIGH, external relay LOW.
+# _handleBootupState() sees sensorLockGate=true → CLOSED immediately.
+# timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,expectedState
+0,1,0,0,0,CLOSED
+100,1,0,0,0,CLOSED
