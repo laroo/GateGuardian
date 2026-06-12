@@ -146,14 +146,15 @@ public:
      */
     void setSensorChangeCallback(void (*callback)());
 
+protected:
+    // State tracking (protected to allow test harness to force state)
+    GateState _currentState;    // Current gate state
+    GateState _previousState;   // Previous state for change detection
+
 private:
     // Timer management
     // Timer<> _stateTimer;        // Timer for gate operation timing
     Timer<> _relayTimer;        // Timer for relay pulse control
-    
-    // State tracking
-    GateState _currentState;    // Current gate state
-    GateState _previousState;   // Previous state for change detection
     bool _sensorLockGate;          // Current lock sensor reading
     bool _previousSensorLockGate;  // Previous lock sensor reading for debouncing
     bool _sensorGateLights;        // Current gate lights sensor reading

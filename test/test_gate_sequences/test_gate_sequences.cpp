@@ -24,12 +24,23 @@ static void runSequence(const std::string& csvPath) {
     }
 
     GateTestHarness gate;
-    // Seed time=0 and initial sensors before initialize()
+    // Seed time and initial sensors before initialize()
     if (!rows.empty()) {
         gate.setSimTime(rows[0].timestamp_ms);
         gate.setSensors(rows[0].sensors);
     }
     gate.initialize();
+
+    // If row[0] carries a known state name, force that state directly.
+    // This allows live recordings that start mid-sequence to bypass boot detection.
+    if (!rows.empty()) {
+        const std::string& s = rows[0].expectedState;
+        if      (s == "CLOSED")  gate.forceState(GATE_CLOSED);
+        else if (s == "OPEN")    gate.forceState(GATE_OPEN);
+        else if (s == "OPENING") gate.forceState(GATE_OPENING);
+        else if (s == "CLOSING") gate.forceState(GATE_CLOSING);
+        else if (s == "UNKNOWN") gate.forceState(GATE_UNKNOWN);
+    }
 
     for (size_t i = 1; i < rows.size(); ++i) {
         const auto& row = rows[i];
@@ -93,6 +104,14 @@ void test_manual_close() {
     runSequence(gSequenceDir + "/manual_close.csv");
 }
 
+void test_full_open_cycle() {
+    runSequence(gSequenceDir + "/full_open_cycle.csv");
+}
+
+void test_full_close_cycle() {
+    runSequence(gSequenceDir + "/full_close_cycle.csv");
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -113,6 +132,8 @@ int main(int argc, char** argv) {
     RUN_TEST_FILTERED(test_open_cycle);
     RUN_TEST_FILTERED(test_close_cycle);
     RUN_TEST_FILTERED(test_manual_close);
+    RUN_TEST_FILTERED(test_full_open_cycle);
+    RUN_TEST_FILTERED(test_full_close_cycle);
     return UNITY_END();
 }
 

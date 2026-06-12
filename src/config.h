@@ -35,6 +35,11 @@
 #define BOOT_DELAY_MS 15000
 #endif
 
+// MQTT live sequence recording (Requirement 11)
+// Define MQTT_SEQUENCE_RECORD to publish CSV rows to gateguardian/sequence after
+// every publishStatus() call. Disabled by default; enable via build flag in private_config.ini.
+// #define MQTT_SEQUENCE_RECORD
+
 // MQTT topic prefix
 #ifndef MQTT_TOPIC_STATUS
 #define MQTT_TOPIC_STATUS "gateguardian/status"

@@ -144,3 +144,23 @@ The device runs an HTTP server on port 80 with the following endpoints:
 | `/gate/close` | Command gate to close |
 | `/gate/stop` | Command gate to stop |
 | `/update` | ElegantOTA firmware update page |
+
+### MQTT Sequence Recording
+
+To capture live gate behaviour as a test sequence, enable recording in `private_config.ini`:
+
+```ini
+-D MQTT_SEQUENCE_RECORD
+```
+
+Then subscribe to the recording topic:
+
+```sh
+mosquitto_sub -h <broker> -p <port> -u <username> -P <password> -t gateguardian/sequence
+```
+
+Each received line is a CSV row ready to paste into a new `test/sequences/*.csv` file. Prepend the header:
+
+```
+timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,expectedState
+```

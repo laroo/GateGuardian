@@ -264,7 +264,21 @@ bool MQTTManager::publishStatus() {
         Serial.println("Failed to publish MQTT message(s)");
         success = false;
     }
-    
+
+#ifdef MQTT_SEQUENCE_RECORD
+    if (_gateController) {
+        char seqRow[128];
+        snprintf(seqRow, sizeof(seqRow), "%lu,%d,%d,%d,%d,%s",
+            millis(),
+            _gateController->getSensorLockGate()         ? 1 : 0,
+            _gateController->getSensorGateLights()       ? 1 : 0,
+            _gateController->getSensorPhotoEye()         ? 1 : 0,
+            _gateController->getSensorExternalRelay()    ? 1 : 0,
+            _gateController->getStateString().c_str());
+        _mqttClient->publish("gateguardian/sequence", seqRow);
+    }
+#endif
+
     return success;
 }
 

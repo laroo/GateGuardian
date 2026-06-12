@@ -164,3 +164,17 @@ The `Gate` class uses `millis()` for all timing decisions and calls `_readSensor
 6. The tests SHALL be compiled and run in a PlatformIO `native` environment so they execute on the host machine without any ESP32 hardware or toolchain.
 
 7. WHEN all sequence assertions pass THEN the test run SHALL exit with code 0; WHEN any assertion fails THEN it SHALL exit with a non-zero code and print a summary of all failures.
+
+### Requirement 11
+
+**User Story:** As a developer, I want the ESP32 to publish live sensor and state snapshots to a dedicated MQTT topic in the same CSV row format used by the unit test sequences, so that I can capture real gate behaviour and turn it directly into a new test file.
+
+#### Acceptance Criteria
+
+1. WHEN the compile-time flag `MQTT_SEQUENCE_RECORD` is defined THEN the system SHALL publish a sequence record row after every `publishStatus()` call; WHEN the flag is not defined the feature SHALL be compiled out entirely.
+
+2. The sequence record SHALL be published to the topic `gateguardian/sequence` as a single CSV-formatted payload with the columns `timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,state` (no header row, values match the unit test CSV format: 0/1 for sensors, state string for state).
+
+3. `timestamp_ms` in the published payload SHALL be the value of `millis()` at the time of publishing.
+
+4. The `MQTT_SEQUENCE_RECORD` build flag SHALL be documented in `private_config.template.ini` as an optional flag and in `config.h` with a default of disabled.

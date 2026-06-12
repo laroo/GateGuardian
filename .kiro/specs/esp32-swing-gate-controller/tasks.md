@@ -232,3 +232,14 @@
     - `test/sequences/close_cycle.csv` — start open (lock=0 stable at t=20100→OPEN), issue `closeGate()` at t=20200, lock=1 at t=40300, assert `CLOSED`
     - `test/sequences/manual_close.csv` — start open (lock=0 stable→OPEN), lock goes 1 at t=21000 without any command, assert `CLOSED` at t=21100
     - _Requirements: 10.5_
+
+- [x] 9. Implement MQTT sequence recording
+
+  - [x] 9.1 Add `MQTT_SEQUENCE_RECORD` flag to config and template
+    - Add `#ifdef MQTT_SEQUENCE_RECORD` guard with a comment in `config.h` documenting the flag as disabled by default
+    - Add an optional commented-out example line `-D MQTT_SEQUENCE_RECORD` to `private_config.template.ini`
+    - _Requirements: 11.4_
+
+  - [x] 9.2 Publish sequence record row in `MQTTManager::publishStatus()`
+    - Inside `publishStatus()`, after the existing publishes, add an `#ifdef MQTT_SEQUENCE_RECORD` block that builds and publishes a CSV row to `gateguardian/sequence` with format `timestamp_ms,sensorLock,sensorLights,sensorPhotoEye,sensorExternalRelay,state` using `millis()`, the gate controller's sensor getters, and `getStateString()`
+    - _Requirements: 11.1, 11.2, 11.3_

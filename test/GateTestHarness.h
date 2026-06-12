@@ -12,6 +12,7 @@ class GateTestHarness : public Gate {
 public:
     void setSimTime(unsigned long t) { _simTime = t; }
     void setSensors(const SensorRow& row) { _sensors = row; }
+    void forceState(GateState s) { _currentState = s; }
 
 protected:
     unsigned long _millis() override { return _simTime; }
