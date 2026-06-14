@@ -422,6 +422,9 @@ void setup() {
       "<tr><th>Gate State</th><td id=\"gateState\">");
     html += gateState;
     html += F("</td></tr>"
+      "<tr><th>In Motion</th><td id=\"inMotion\">");
+    html += (gate && gate->isInMotion()) ? "Yes" : "No";
+    html += F("</td></tr>"
       "</tbody>"
       "</table>"
       "<div hx-get=\"/status\" hx-trigger=\"every 1s\" hx-swap=\"none\" hx-on::after-request=\""
@@ -429,6 +432,7 @@ void setup() {
         "document.getElementById('clientId').textContent=d.clientId;"
         "document.getElementById('uptime').textContent=d.uptime;"
         "document.getElementById('gateState').textContent=d.gateState;"
+        "document.getElementById('inMotion').textContent=d.inMotion?'Yes':'No';"
       "\"></div>"
       "</article>"
       "<article>"
@@ -457,7 +461,9 @@ void setup() {
     json += uptimeStr;
     json += "\",\"gateState\":\"";
     json += gateState;
-    json += "\"}";  
+    json += "\",\"inMotion\":";
+    json += (gate && gate->isInMotion()) ? "true" : "false";
+    json += "}";
     server.send(200, "application/json", json);
   });
   server.on("/gate/close", []() {

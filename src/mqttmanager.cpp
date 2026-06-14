@@ -249,6 +249,7 @@ bool MQTTManager::publishStatus() {
         _mqttClient->publish("gateguardian/sensor/lights", _gateController->getSensorGateLights() ? "1" : "0");
         _mqttClient->publish("gateguardian/sensor/photo_eye", _gateController->getSensorPhotoEye() ? "1" : "0");
         _mqttClient->publish("gateguardian/sensor/external_relay", _gateController->getSensorExternalRelay() ? "1" : "0");
+        _mqttClient->publish("gateguardian/in_motion", _gateController->isInMotion() ? "1" : "0");
     } else {
         statePublished = _mqttClient->publish("gateguardian/state", "MISSING");
     }

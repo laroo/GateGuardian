@@ -24,9 +24,10 @@ const int PIN_SENSOR_GATE_LIGHTS = 33;    // Gate lights sensor
 const int PIN_SENSOR_PHOTO_EYE = 36;      // Photo eye sensor (input only)
 const int PIN_SENSOR_EXTERNAL_RELAY = 35; // External relay sensor (input only)
 
-static const unsigned long GATE_OPEN_TRAVEL_MS  = 20000; // Max travel time for opening (ms)
-static const unsigned long GATE_CLOSE_TRAVEL_MS = 30000; // Max travel time for closing (ms)
-static const unsigned long GATE_BOOT_SETTLE_MS  = 20000; // Boot-time settle period (ms)
+static const unsigned long GATE_OPEN_TRAVEL_MS      = 20000; // Max travel time for opening (ms)
+static const unsigned long GATE_CLOSE_TRAVEL_MS     = 30000; // Max travel time for closing (ms)
+static const unsigned long GATE_BOOT_SETTLE_MS      = 20000; // Boot-time settle period (ms)
+static const unsigned long GATE_LIGHTS_BLINK_GAP_MS =  1500; // Gap after last blink to declare motion stopped (ms)
 
 
 // ============================================================================
@@ -51,6 +52,8 @@ Gate::Gate() :
     _lastSensorReadExtRelay(0),
     _relayActivationTime(0),
     _lastSensorChangeNotify(0),
+    _lastLightsHighTime(0),
+    _inMotion(false),
     _relayActive(false),
     _initialized(false),
     _sensorChangeCallback(nullptr)
@@ -132,6 +135,14 @@ void Gate::update() {
         }
     }
     
+    // Update in-motion flag based on gate warning light blink
+    if (_sensorGateLights) {
+        _lastLightsHighTime = currentTime;
+        _inMotion = true;
+    } else if (_inMotion && (currentTime - _lastLightsHighTime >= GATE_LIGHTS_BLINK_GAP_MS)) {
+        _inMotion = false;
+    }
+
     // Photo eye sensor debouncing (50ms)
     if (currentTime - _lastSensorReadPhotoEye >= 50) {
         bool newSensorState = _readSensorPhotoEye();
@@ -372,6 +383,10 @@ GateState Gate::getState() const {
 
 bool Gate::isMoving() const {
     return (_currentState == GATE_OPENING || _currentState == GATE_CLOSING);
+}
+
+bool Gate::isInMotion() const {
+    return _inMotion;
 }
 
 bool Gate::isRelayActive() const {

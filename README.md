@@ -32,6 +32,7 @@ gateguardian/sensor/photo_eye = 0
 gateguardian/sensor/external_relay = 0
 gateguardian/client_id = esp32_gate_FFAA00
 gateguardian/uptime = 1510
+gateguardian/in_motion = 0
 ```
 
 ### MQTT Commands

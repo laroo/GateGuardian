@@ -103,6 +103,12 @@ public:
      * @return true if gate is opening or closing
      */
     bool isMoving() const;
+
+    /**
+     * Check if gate is physically in motion based on warning light blinking
+     * @return true if gate lights have blinked recently (within blink gap threshold)
+     */
+    bool isInMotion() const;
     
     /**
      * Check if relay is currently active
@@ -172,6 +178,8 @@ private:
     unsigned long _lastSensorReadExtRelay;  // Timestamp of last external relay sensor reading
     unsigned long _relayActivationTime; // Timestamp when relay was activated
     unsigned long _lastSensorChangeNotify;  // Timestamp of last sensor change notification
+    unsigned long _lastLightsHighTime;       // Timestamp of last lights HIGH reading
+    bool _inMotion;                          // True while warning light blinks (gate physically moving)
     
     // Control flags
     bool _relayActive;          // Flag indicating relay is currently active
