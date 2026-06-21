@@ -17,6 +17,7 @@
 // #include <WiFi.h>
 #include <WebServer.h>
 #include <ElegantOTA.h>
+#include "webmanager.h"
 #include "DHT.h"
 // #include "RemoteDebug.h"
 
@@ -32,7 +33,6 @@
 #include "mqttmanager.h"
 #include <SPI.h>
 #include <Network.h>
-// #include <Debounce16.h>
 
 EMACDriver driver(ETH_PHY_LAN8720, 23, 18, 16);   // note powerPin = 16 required
 // EMACDriver driver(ETH_PHY_LAN8720, ETH_PHY_MDC, ETH_PHY_MDIO, ETH_PHY_POWER);
@@ -43,11 +43,6 @@ WiFiClient wifiClient;
 
 // Pointer to the active client (Ethernet or WiFi)
 NetworkClient* activeClient = nullptr;
-
-// MQTT client - will be configured with activeClient dynamically
-// PubSubClient mqttClient;
-
-WebServer server(80);
 
 // Connection check result (used by network event handler)
 int connectionStatus = 0;
@@ -136,8 +131,6 @@ void onNetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
 // ============================================================================
 struct Config {
   char clientId[32]; // Random client ID generated at startup
-  // char statusTopic[64] = "gateguardian/status";
-  // char commandTopic[64] = "gateguardian/command";
 
   // Timing Settings
   unsigned long gateOperationTime = 20000; // 20 seconds (Requirement 2)
@@ -184,12 +177,6 @@ bool currentButtonState = HIGH;
 unsigned long lastButtonChange = 0;
 bool buttonPressed = false; // Flag to track button press events
 
-// Debounce16 gateLightsButton(config.gateLightsPin, LOW);
-// Debounce16 gateLockButton(config.gateLockPin, LOW);
-// Debounce16 externalRelayButton(config.externalRelayPin, LOW);
-// Debounce16 photoEyeButton(config.photoEyePin, LOW);
-
-
 // ============================================================================
 // FUNCTION DECLARATIONS
 // ============================================================================
@@ -203,44 +190,6 @@ bool reportConnectionStatusCallback(void *);
 // bool checkInputCallback(void *);
 NetworkClient* getActiveClient();
 
-void onButtonPress() {
-    Serial.println("!!!!!!! Button pressed!");
-}
-
-void onButtonRelease() {
-    Serial.println("!!!!!!! Button released!");
-}
-
-// void mqttCallback(char* topic, byte* payload, unsigned int length) {
-//   Serial.print("Message arrived [");
-//   Serial.print(topic);
-//   Serial.print("] ");
-//   for (int i=0;i<length;i++) {
-//     Serial.print((char)payload[i]);
-//   }
-//   Serial.println();
-// }
-
-// void mqttReconnect() {
-//   // Loop until we're reconnected
-//   while (!mqttClient.connected()) {
-//     Serial.print("Attempting MQTT connection...");
-//     // Attempt to connect
-//     if (mqttClient.connect("arduinoClient")) {
-//       Serial.println("connected");
-//       // Once connected, publish an announcement...
-//       mqttClient.publish("outTopic","hello world");
-//       // ... and resubscribe
-//       mqttClient.subscribe("inTopic");
-//     } else {
-//       Serial.print("failed, rc=");
-//       Serial.print(mqttClient.state());
-//       Serial.println(" try again in 5 seconds");
-//       // Wait 5 seconds before retrying
-//       delay(5000);
-//     }
-//   }
-// }
 
 // ============================================================================
 // SETUP FUNCTION
@@ -280,27 +229,7 @@ void setup() {
   // Debug.showProfiler(false);        // Profiler (Good to measure times, to optimize codes)
   // Debug.showColors(true);          // Colors
   // Serial.println("[RemoteDebug] Initialized");
-
-
-  // gateLightsButton.onPress(onButtonPress);
-  // gateLightsButton.onRelease(onButtonRelease);
-
-  // gateLockButton.onPress(onButtonPress);
-  // gateLockButton.onRelease(onButtonRelease);
-
-  // externalRelayButton.onPress(onButtonPress);
-  // externalRelayButton.onRelease(onButtonRelease);
-
-  // photoEyeButton.onPress(onButtonPress);
-  // photoEyeButton.onRelease(onButtonRelease);
-
   
-  // Initialize button state after GPIO configuration
-  // lastButtonState = digitalRead(config.buttonPin);
-  // currentButtonState = lastButtonState;
-  // Serial.print("[INIT] Initial button state: ");
-  // Serial.println(lastButtonState ? "HIGH (not pressed)" : "LOW (pressed)");
-
   // Initialize Gate controller
   gate = new Gate();
   if (gate) {
@@ -326,11 +255,6 @@ void setup() {
   } else {
     Serial.println("[ERROR] Failed to initialize LED manager");
   }
-
-
-  // mqttClient.setServer(config.mqttBroker, config.mqttPort);
-  // mqttClient.setCallback(mqttCallback);
-
 
   // Register network event listener
   Network.onEvent(onNetworkEvent);
@@ -389,107 +313,8 @@ void setup() {
     Serial.println("[ERROR] Failed to initialize MQTT manager");
   }
 
-
-  server.on("/", []() {
-    unsigned long uptimeSec = millis() / 1000;
-    unsigned long h = uptimeSec / 3600;
-    unsigned long m = (uptimeSec % 3600) / 60;
-    unsigned long s = uptimeSec % 60;
-    char uptimeStr[12];
-    snprintf(uptimeStr, sizeof(uptimeStr), "%02lu:%02lu:%02lu", h, m, s);
-    String gateState = gate ? gate->getStateString() : "unknown";
-
-    String html = F(
-      "<!DOCTYPE html>"
-      "<html lang=\"en\"><head>"
-      "<meta charset=\"UTF-8\">"
-      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-      "<title>GateGuardian</title>"
-      "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\">"
-      "<script src=\"https://unpkg.com/htmx.org@2.0.4\"></script>"
-      "</head><body>"
-      "<main class=\"container\">"
-      "<h1>GateGuardian</h1>"
-      "<article>"
-      "<table>"
-      "<tbody>"
-      "<tr><th>Client ID</th><td id=\"clientId\">");
-    html += config.clientId;
-    html += F("</td></tr>"
-      "<tr><th>Uptime</th><td id=\"uptime\">");
-    html += uptimeStr;
-    html += F("</td></tr>"
-      "<tr><th>Gate State</th><td id=\"gateState\">");
-    html += gateState;
-    html += F("</td></tr>"
-      "<tr><th>In Motion</th><td id=\"inMotion\">");
-    html += (gate && gate->isInMotion()) ? "Yes" : "No";
-    html += F("</td></tr>"
-      "</tbody>"
-      "</table>"
-      "<div hx-get=\"/status\" hx-trigger=\"every 1s\" hx-swap=\"none\" hx-on::after-request=\""
-        "var d=JSON.parse(event.detail.xhr.responseText);"
-        "document.getElementById('clientId').textContent=d.clientId;"
-        "document.getElementById('uptime').textContent=d.uptime;"
-        "document.getElementById('gateState').textContent=d.gateState;"
-        "document.getElementById('inMotion').textContent=d.inMotion?'Yes':'No';"
-      "\"></div>"
-      "</article>"
-      "<article>"
-      "<h2>Controls</h2>"
-      "<div style=\"display:flex;gap:1rem;\">"
-      "<button hx-get=\"/gate/open\" hx-swap=\"none\">Open</button>"
-      "<button hx-get=\"/gate/close\" hx-swap=\"none\" class=\"secondary\">Close</button>"
-      "</div>"
-      "</article>"
-      "</main>"
-      "</body></html>"
-    );
-    server.send(200, "text/html", html);
-  });
-  server.on("/status", []() {
-    unsigned long uptimeSec = millis() / 1000;
-    unsigned long h = uptimeSec / 3600;
-    unsigned long m = (uptimeSec % 3600) / 60;
-    unsigned long s = uptimeSec % 60;
-    char uptimeStr[12];
-    snprintf(uptimeStr, sizeof(uptimeStr), "%02lu:%02lu:%02lu", h, m, s);
-    String gateState = gate ? gate->getStateString() : "unknown";
-    String json = "{\"clientId\":\"";
-    json += config.clientId;
-    json += "\",\"uptime\":\"";
-    json += uptimeStr;
-    json += "\",\"gateState\":\"";
-    json += gateState;
-    json += "\",\"inMotion\":";
-    json += (gate && gate->isInMotion()) ? "true" : "false";
-    json += "}";
-    server.send(200, "application/json", json);
-  });
-  server.on("/gate/close", []() {
-    gate->closeGate();
-    server.send(200, "text/plain", "Gate closing...");
-  });
-  server.on("/gate/open", []() {
-    gate->openGate();
-    server.send(200, "text/plain", "Gate opening...");
-  });
-  server.on("/gate/stop", []() {
-    gate->stopGate();
-    server.send(200, "text/plain", "Gate stopping...");
-  });
-  // server.on("/gate/toggle", []() {
-  //   gate->toggle();
-  //   server.send(200, "text/plain", "Gate toggling...");
-  // });
-  
-  // server.on("/gate/stop", []() {
-  //   gate->stop();
-  //   server.send(200, "text/plain", "Gate stopping...");
-  // });
-  ElegantOTA.begin(&server, OTA_USERNAME_STR, OTA_PASSWORD_STR);
-  server.begin();
-  Serial.println("HTTP server started");
+  Serial.println("[INIT] Setting up web server...");
+  setupWebServer(config.clientId);
 
   // Print configuration summary
   printConfigSummary();
@@ -613,8 +438,7 @@ void loop() {
     //     Serial.println("Active Network Loop!");
     // }
 
-    server.handleClient();
-    ElegantOTA.loop();
+    loopWebServer();
 
     // Update MQTT manager (Requirements 7.1, 7.2, 7.3, 7.4)
     if (mqttManager) {
@@ -623,11 +447,6 @@ void loop() {
     }
     // Debug.handle();
 
-    // mqttClient.setClient(*activeClient);
-    // if (!mqttClient.connected()) {
-    //   mqttReconnect();
-    // }
-    // mqttClient.loop();
   }
 
   unsigned long loopStart = millis();
@@ -777,82 +596,10 @@ void initializeGPIO() {
 }
 
 // ============================================================================
-// BUTTON INPUT HANDLING
-// ============================================================================
-// void handleButtonInput() {
-//   currentButtonState = digitalRead(config.buttonPin);
-//   unsigned long currentTime = millis();
-
-//   // Debug: Log button state changes (remove this in production)
-//   static unsigned long lastDebugTime = 0;
-//   if (currentTime - lastDebugTime > 500) { // Every 5 seconds
-//     Serial.print("[DEBUG] Button state: ");
-//     Serial.print(currentButtonState ? "HIGH" : "LOW");
-//     Serial.print(", Gate state: ");
-//     if (gate) {
-//       Serial.println(gate->getStateString());
-//     } else {
-//       Serial.println("NULL");
-//     }
-//     lastDebugTime = currentTime;
-//   }
-
-//   // Check if button state changed and debounce time has passed
-//   // (Requirement 1.3, 4.3, 5.3)
-//   if (currentButtonState != lastButtonState &&
-//       (currentTime - lastButtonChange) >= config.debounceTime) {
-
-//     lastButtonChange = currentTime;
-//     lastButtonState = currentButtonState;
-
-//     Serial.print("[BUTTON] Button state changed to: ");
-//     Serial.println(currentButtonState ? "HIGH (released)" : "LOW (pressed)");
-
-//     // Button pressed (LOW due to pull-up resistor)
-//     if (currentButtonState == LOW) {
-//       buttonPressed = true;
-//       Serial.println("[BUTTON] Button pressed - debounced");
-
-//       // Check if gate is available and not during relay activation
-//       // (Requirements 1.1, 1.2, 4.3)
-//       if (gate) {
-//         // Prevent button actions during relay activation periods
-//         if (gate->isRelayActive()) {
-//           Serial.println("[BUTTON] Relay is active, button action ignored");
-//         } else if (gate->isMoving()) {
-//           Serial.println("[BUTTON] Gate is moving, button action ignored");
-//         } else {
-//           Serial.println("[BUTTON] Triggering gate toggle");
-//           gate->toggle();
-//         }
-//       } else {
-//         Serial.println("[ERROR] Gate controller not available");
-//       }
-//     } else {
-//       // Button released (HIGH due to pull-up resistor)
-//       if (buttonPressed) {
-//         buttonPressed = false;
-//         Serial.println("[BUTTON] Button released - debounced");
-//       }
-//     }
-//   }
-// }
-
-// ============================================================================
 // CONFIGURATION SUMMARY
 // ============================================================================
 void printConfigSummary() {
   Serial.println("[CONFIG] System Configuration:");
-  // Serial.print("  MQTT Broker: ");
-  // Serial.print(config.mqttBroker);
-  // Serial.print(":");
-  // Serial.println(config.mqttPort);
-  // Serial.print("  Client ID: ");
-  // Serial.println(config.clientId);
-  // Serial.print("  Status Topic: ");
-  // Serial.println(config.statusTopic);
-  // Serial.print("  Command Topic: ");
-  // Serial.println(config.commandTopic);
   Serial.print("  Gate Operation Time: ");
   Serial.print(config.gateOperationTime);
   Serial.println("ms");
